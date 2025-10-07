@@ -1,0 +1,1366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ice Cream Express 🍦</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --road-fast: #f5f5f5;
+            --road-slow: #e6bf83;
+            --obstacle: #d0d9e6;
+            --bot-path: #64b5f6;
+            --player-path: #f06292;
+            --player-visited: #f8bbd0; /* Light pink for visited paths */
+            --visited: #b3e5fc;
+            --border: #a1887f;
+            --player-dark: #c2185b;
+            --bot-dark: #1976d2;
+            --text-dark: #424242;
+            --bg-light: #fafafa;
+            --white: #ffffff;
+            --shadow: rgba(0, 0, 0, 0.1);
+            --unicorn-gradient: linear-gradient(45deg, #ffafcc, #e2b6ff, #c8b6ff, #ffc8dd);
+            --success-green: #4CAF50;
+        }
+
+        * { box-sizing: border-box; }
+
+        html {
+              scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Poppins', sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            text-align: center;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start; /* Align to top for scrolling */
+            min-height: 100vh;
+        }
+
+        #app-container {
+            width: 100%;
+            max-width: 1100px;
+            padding: 25px 15px; /* Padding for the main content */
+        }
+
+        h1 {
+            font-family: 'Fredoka One', cursive;
+            font-size: clamp(2.2em, 5vw, 3em);
+            margin: 0 0 15px 0;
+            text-shadow: 2px 2px 5px var(--shadow);
+            background: var(--unicorn-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-fill-color: transparent;
+        }
+        
+        #rules-container {
+            max-width: 850px;
+            background: var(--white);
+            padding: 20px 25px;
+            border-radius: 20px;
+            margin: 0 auto 25px auto;
+            text-align: left;
+            box-shadow: 0 4px 15px var(--shadow);
+            border: 1px solid #eee;
+        }
+
+        #rules-container h3 {
+            font-family: 'Fredoka One', cursive;
+            text-align: center;
+            margin: 0 0 15px 0;
+            color: var(--text-dark);
+            font-size: 1.5em;
+        }
+        
+        .rules-section {
+            margin-top: 15px;
+        }
+        .rules-section h4 {
+            font-family: 'Fredoka One', cursive;
+            color: var(--player-dark);
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 2px solid var(--player-path);
+        }
+
+        #rules-container ul {
+            padding-left: 20px;
+            list-style: '✔ ';
+            margin: 0;
+        }
+        
+        #rules-container li { 
+            margin-bottom: 8px;
+            padding-left: 10px;
+        }
+
+        .player-color { color: var(--player-path); font-weight: 600; }
+        .bot-color { color: var(--bot-path); font-weight: 600; }
+
+        #game-layout {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+        }
+        
+        #game-board {
+            display: grid;
+            grid-template-columns: repeat(10, clamp(30px, 8vw, 52px));
+            grid-template-rows: repeat(10, clamp(30px, 8vw, 52px));
+            gap: 4px;
+            background-color: var(--border);
+            border: 6px solid var(--border);
+            border-radius: 12px;
+            padding: 6px;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+
+        .cell {
+            border-radius: 6px;
+            display: flex; justify-content: center; align-items: center;
+            font-size: clamp(18px, 4vw, 26px);
+            user-select: none;
+            cursor: pointer;
+            transition: transform 0.2s, background-color 0.3s;
+            position: relative;
+        }
+        
+        .cell .path-icon {
+            position: absolute;
+            width: 60%;
+            height: 60%;
+            bottom: 2px;
+            right: 2px;
+            opacity: 0.8;
+        }
+
+        .cell.road-fast { background-color: var(--road-fast); }
+        .cell.road-slow { background-color: var(--road-slow); }
+        .cell.obstacle { background-color: var(--obstacle); cursor: not-allowed; }
+        .cell.player-visited { background-color: var(--player-visited); }
+        .cell.player-path { background-color: var(--player-path); }
+        .cell.bot-path { background-color: var(--bot-path); }
+        .cell.visited { background-color: var(--visited); }
+        .cell.end-node-style {
+            background: var(--unicorn-gradient) !important;
+            border-radius: 50%;
+            transform: scale(1.1);
+            color: var(--text-dark);
+        }
+
+        #controls-info {
+            background: var(--white);
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px var(--shadow);
+            width: 100%;
+            max-width: 540px;
+            border: 1px solid #eee;
+        }
+
+        #info-header {
+            padding: 10px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            transition: background-color 0.5s ease;
+            background: var(--unicorn-gradient); /* Apply unicorn gradient */
+        }
+        #info-header h2 {
+            color: white; /* Make text readable on gradient */
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.5);
+        }
+        
+        #round-title { font-family: 'Fredoka One', cursive; font-size: 1.6em; margin: 0; }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 15px;
+            font-weight: 600;
+            font-size: 1.1em;
+        }
+        
+        .meter-container {
+            grid-column: 1 / -1;
+            text-align: left;
+            font-family: 'Fredoka One', cursive;
+        }
+        .meter-label { 
+            display: flex; justify-content: space-between; align-items: center; 
+            font-size: 1em; padding: 0 5px 5px 5px; 
+        }
+        .meter-label .icon-group {
+            display: flex;
+            align-items: center;
+        }
+        .meter-label .icon-group .icon-display {
+            width: 35px;
+            height: 35px;
+        }
+        .bar { width: 100%; height: 25px; background-color: #e0e0e0; border-radius: 12.5px; overflow: hidden; border: 3px solid var(--white); box-shadow: inset 0 2px 4px rgba(0,0,0,0.1); }
+        .bar-inner { height: 100%; transition: width 0.5s ease-out; border-radius: 9.5px; }
+        .bar-inner.player-bar { background: linear-gradient(90deg, #f48fb1, var(--player-path)); }
+        
+        #message-box { font-size: 1.1em; font-weight: 600; min-height: 40px; margin: 20px 0; }
+        
+        button {
+            font-family: 'Fredoka One', cursive; font-size: 1.1em; padding: 14px 30px;
+            border: none; border-radius: 12px; cursor: pointer; color: white;
+            transition: all 0.2s ease;
+        }
+        button.player-btn { background-color: var(--player-path); box-shadow: 0 4px var(--player-dark); }
+        button.player-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 2px var(--player-dark); }
+        button.bot-btn { background-color: var(--bot-path); box-shadow: 0 4px var(--bot-dark); }
+        button.bot-btn:active:not(:disabled) { transform: translateY(2px); box-shadow: 0 2px var(--bot-dark); }
+        button:disabled { background-color: #bdbdbd; box-shadow: 0 4px #757575; cursor: not-allowed; }
+        
+        #results-comparison {
+            text-align: left;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+        }
+        #results-comparison h4 {
+            font-family: 'Fredoka One', cursive;
+            margin: 0 0 10px 0;
+            color: var(--bot-dark);
+        }
+        #results-comparison ul { list-style: '🔸 '; padding-left: 20px; }
+        #results-comparison li { padding-left: 8px; margin-bottom: 5px; }
+
+
+        /* --- POPUP STYLES --- */
+        .popup-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--bg-light); z-index: 1000;
+            display: flex; justify-content: center; align-items: center;
+            padding: 20px;
+        }
+        .popup-content {
+            background: var(--white); padding: 40px 50px; border-radius: 20px;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12); max-width: 1000px;
+            width: 100%; position: relative; text-align: center;
+            margin: auto; max-height: calc(100vh - 40px); overflow-y: auto;
+        }
+        .close-x-btn {
+            position: absolute; top: 15px; right: 25px; font-size: 2.5em;
+            font-weight: bold; background: none; border: none;
+            color: #aaa; cursor: pointer; line-height: 1;
+            padding: 0; box-shadow: none; transition: color 0.2s;
+        }
+        .close-x-btn:hover { color: var(--text-dark); }
+
+        .popup-content h3 { font-family: 'Fredoka One', cursive; font-size: 2.2em; margin-top: 0; color: var(--bot-dark); }
+        .popup-content .popup-body-text { text-align: left; line-height: 1.7; font-size: 1.1em; max-width: 800px; margin: 15px auto; }
+        .popup-content ul { max-width: 800px; margin: 15px auto; text-align: left;}
+        .popup-content strong { color: var(--bot-path); }
+
+        .algorithm-explanation { margin-top: 25px; padding-top: 25px; border-top: 1px dashed #ccc;}
+        .algorithm-explanation h4 { font-family: 'Fredoka One', cursive; color: var(--bot-path); font-size: 1.6em; margin-bottom: 15px;}
+        
+        #algorithm-demo {
+            display: flex; flex-direction: column; align-items: center; 
+            margin: 20px auto; gap: 25px; max-width: 900px;
+        }
+        #mini-game-board, .tsp-mini-board {
+            display: grid;
+            grid-template-columns: repeat(5, 50px);
+            grid-template-rows: repeat(5, 50px);
+            gap: 2px; background-color: var(--border); border: 4px solid var(--border);
+            border-radius: 8px; padding: 4px; flex-shrink: 0;
+        }
+        #mini-game-board .cell, .tsp-mini-board .cell {
+            width: 50px; height: 50px; font-size: 1em;
+            border-radius: 4px; position: relative;
+        }
+        #mini-game-board .cell.current-bot-pos {
+            background-color: var(--bot-path); transform: scale(1.1);
+            box-shadow: 0 0 8px var(--bot-path); z-index: 1;
+        }
+        #mini-game-board .cell.next-consider {
+            background-color: var(--visited); animation: pulse-consider 1s infinite alternate;
+        }
+        #mini-game-board .cell.chosen-next-step {
+            background-color: var(--success-green) !important; transform: scale(1.15);
+            box-shadow: 0 0 10px var(--success-green); z-index: 2;
+        }
+        .cost-label {
+            position: absolute; bottom: 0; right: 0; background: rgba(255,255,255,0.8);
+            padding: 2px 4px; font-size: 0.7em; border-radius: 3px;
+            line-height: 1; color: var(--text-dark); font-weight: 600;
+        }
+        .cost-label span { display: block; }
+        .cost-label .g-cost { color: var(--bot-dark); }
+        .cost-label .h-cost { color: var(--player-dark); }
+        .cost-label .f-cost { color: var(--success-green); font-weight: bold; }
+        
+        .tsp-cost-label {
+            position: absolute; top: 2px; left: 3px; font-size: 0.8em;
+            color: #757575; font-weight: 600; opacity: 0.9;
+        }
+
+
+        @keyframes pulse-consider { from { opacity: 0.6; } to { opacity: 1; } }
+        #demo-controls { margin-top: 15px; display: flex; flex-direction: column; gap: 10px; }
+        #explanation-text { text-align: center; margin-top: 15px; font-size: 1.1em; min-height: 50px; }
+        
+        /* --- TSP DEMO STYLES --- */
+        #tsp-demo-layout { display: flex; flex-direction: column; align-items: center; gap: 20px; }
+        .tsp-route-container { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .tsp-route-container h5 { font-family: 'Fredoka One', cursive; margin: 0; font-size: 1.2em; }
+        #tsp-boards { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; }
+        #tsp-controls { display: flex; gap: 15px; margin-top: 15px; }
+        .tsp-route-container.winner { 
+            border: 4px solid var(--success-green);
+            border-radius: 12px;
+            padding: 10px;
+            background-color: #f1f8e9;
+        }
+        #tsp-explanation-text { font-size: 1.1em; font-weight: 600; min-height: 3em; margin-top: 15px; }
+        
+        .path-arrow {
+            position: absolute;
+            font-size: 1.2em;
+            color: var(--white);
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+            pointer-events: none;
+            transition: transform 0.2s;
+        }
+        .arrow-up { transform: rotate(-90deg); }
+        .arrow-down { transform: rotate(90deg); }
+        .arrow-left { transform: rotate(180deg); }
+        .arrow-right { transform: rotate(0deg); }
+
+        #play-again-options { display: flex; gap: 15px; justify-content: center; }
+
+        @media (min-width: 950px) {
+            #game-layout { flex-direction: row; align-items: flex-start; }
+            #algorithm-demo { flex-direction: row; align-items: flex-start; }
+            #tsp-demo-layout { flex-direction: row; align-items: flex-start; justify-content: center;}
+            #tsp-controls { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+<div id="app-container">
+    <h1>Ice Cream Express</h1>
+
+    <div id="rules-container">
+        <h3>How to Play</h3>
+        <div id="basics-rules" class="rules-section">
+            <h4>Trainee Delivery 📜</h4>
+            <ul>
+                <li><strong>Your Mission:</strong> Deliver ice cream from the start (🚚) to the house (🏠) using the route with the lowest possible cost.</li>
+                <li><strong>Moving Your Truck:</strong> Click an adjacent square to move. To undo, click the square you were just on. Be careful, going back still costs time!</li>
+                <li><strong>Reading the Map:</strong>
+                    <ul>
+                        <li>⬜ White Roads are fast (Cost: 1)</li>
+                        <li>🟫 Brown Roads are slow (Cost: 3)</li>
+                        <li>🌳 Buildings are obstacles; you can't drive through them.</li>
+                    </ul>
+                </li>
+                 <li><strong>Beat the Clock:</strong> Higher cost makes your ice cream melt and your tip go down. A lower cost means a bigger tip!</li>
+            </ul>
+        </div>
+        <div id="expert-rules" class="rules-section" style="display: none;">
+            <h4>Expert Delivery (Rounds 4-6) ✨</h4>
+            <ul>
+                <li><strong>Two Deliveries:</strong> Now, you must deliver to <strong>both</strong> House 1 (🏠1) and House 2 (🏠2).</li>
+                <li><strong>Order Matters:</strong> The key to winning is finding the best <strong>order</strong> to visit the houses. Is it faster to go to House 1 first, then House 2? Or the other way around? The lowest total cost wins!</li>
+            </ul>
+        </div>
+    </div>
+
+    <div id="game-layout">
+        <div id="game-board"></div>
+        <div id="controls-info">
+            <div id="info-header">
+                <h2 id="round-title"></h2>
+            </div>
+            <div class="stats-grid">
+                <div id="cost-display">Cost: 0s</div>
+                <div id="tip-display">Tip: $10.00</div>
+                <div class="meter-container">
+                    <div class="meter-label">
+                        <span>Tips & Meltdown</span>
+                        <div>
+                            <span id="money-icon">🤑</span>
+                            <span id="ice-cream-icon">🍦</span>
+                        </div>
+                    </div>
+                    <div class="bar"><div id="tip-meter-bar" class="bar-inner player-bar"></div></div>
+                </div>
+            </div>
+            <div id="message-box"></div>
+            <div class="button-group">
+                <button id="finish-btn" class="player-btn"></button>
+                <button id="start-next-round-btn" class="player-btn" style="display: none;"></button>
+            </div>
+            <div id="results-comparison" style="display: none;"></div>
+        </div>
+    </div>
+</div>
+
+<div id="popup-overlay" style="display: none;">
+    <div class="popup-content">
+        <button class="close-x-btn" id="close-x-btn">&times;</button>
+        <h3 id="popup-title"></h3>
+        <div id="popup-body"></div>
+
+        <div id="algorithm-explanation-container" style="display: none;">
+          <div class="algorithm-explanation">
+              <h4>Watch the Bot Think! (A* Search)</h4>
+              <div id="algorithm-demo">
+                  <div id="mini-game-board"></div>
+                  <div id="demo-controls">
+                      <div id="explanation-text">Click "Next Step" to see how the bot thinks!</div>
+                      <button id="prev-step-btn" class="bot-btn" disabled>Previous Step</button>
+                      <button id="next-step-btn" class="bot-btn">Next Step!</button>
+                  </div>
+              </div>
+          </div>
+        </div>
+        
+        <div id="tsp-explanation-container" style="display: none;">
+            <div class="algorithm-explanation">
+                <h4>How the Bot Solves TSP</h4>
+                <div id="tsp-demo-layout">
+                    <div id="tsp-boards">
+                        <div id="tsp-route-a-container" class="tsp-route-container">
+                            <h5>Route A: 🤖 → 🏠1 → 🏠2</h5>
+                            <div id="tsp-mini-board-a" class="tsp-mini-board"></div>
+                            <div id="tsp-cost-a">Cost: ?</div>
+                        </div>
+                        <div id="tsp-route-b-container" class="tsp-route-container">
+                            <h5>Route B: 🤖 → 🏠2 → 🏠1</h5>
+                            <div id="tsp-mini-board-b" class="tsp-mini-board"></div>
+                            <div id="tsp-cost-b">Cost: ?</div>
+                        </div>
+                    </div>
+                    <div id="tsp-controls">
+                        <button id="calc-route-a-btn" class="bot-btn">Calculate Route A</button>
+                        <button id="calc-route-b-btn" class="bot-btn" disabled>Calculate Route B</button>
+                        <button id="compare-tsp-btn" class="bot-btn" disabled>Compare!</button>
+                    </div>
+                </div>
+                <div id="tsp-explanation-text">The bot checks both possible routes. Click to see the cost for Route A.</div>
+            </div>
+        </div>
+
+        <button id="close-popup-btn" class="player-btn" style="margin-top: 20px;"></button>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // --- ELEMENT SELECTORS ---
+    const boardEl = document.getElementById('game-board'), messageBox = document.getElementById('message-box');
+    const costDisplay = document.getElementById('cost-display'), tipDisplay = document.getElementById('tip-display');
+    const roundTitle = document.getElementById('round-title'), tipMeterBar = document.getElementById('tip-meter-bar');
+    const finishBtn = document.getElementById('finish-btn'), startNextRoundBtn = document.getElementById('start-next-round-btn');
+    const moneyIcon = document.getElementById('money-icon'), iceCreamIcon = document.getElementById('ice-cream-icon');
+    const expertRules = document.getElementById('expert-rules');
+    const resultsComparisonEl = document.getElementById('results-comparison');
+    
+    const popupOverlay = document.getElementById('popup-overlay'), popupTitle = document.getElementById('popup-title');
+    const popupBody = document.getElementById('popup-body'), closePopupBtn = document.getElementById('close-popup-btn');
+    const closeXBtn = document.getElementById('close-x-btn');
+    
+    const algoExplanationContainer = document.getElementById('algorithm-explanation-container');
+    const miniGameBoard = document.getElementById('mini-game-board'), explanationText = document.getElementById('explanation-text');
+    const prevStepBtn = document.getElementById('prev-step-btn'), nextStepBtn = document.getElementById('next-step-btn');
+
+    const tspExplanationContainer = document.getElementById('tsp-explanation-container');
+    const tspMiniBoardA = document.getElementById('tsp-mini-board-a'), tspMiniBoardB = document.getElementById('tsp-mini-board-b');
+    const tspCostA = document.getElementById('tsp-cost-a'), tspCostB = document.getElementById('tsp-cost-b');
+    const calcRouteABtn = document.getElementById('calc-route-a-btn'), calcRouteBBtn = document.getElementById('calc-route-b-btn');
+    const compareTspBtn = document.getElementById('compare-tsp-btn'), tspExplanationText = document.getElementById('tsp-explanation-text');
+    const tspRouteAContainer = document.getElementById('tsp-route-a-container'), tspRouteBContainer = document.getElementById('tsp-route-b-container');
+
+    // --- GAME CONSTANTS & STATE VARIABLES ---
+    const GRID_SIZE = 10, OBSTACLE_COUNT = 18, SLOW_ROAD_COUNT = 25;
+    const FAST_ROAD_COST = 1, SLOW_ROAD_COST = 3, MAX_COST = 40;
+    
+    let grid = [], startNode, endNode, endNode2;
+    let playerPath = [], housesVisited = {h1: false, h2: false};
+    let playerVisited = new Set();
+    let playerCost = 0, botPathCost = 0, travelingBotCost = 0, currentRound = 1, currentDemoStep = 0;
+    let demoGrid, demoPath = [];
+
+    // --- SCORE KEEPING VARIABLES ---
+    let playerCostRound1 = 0, playerCostRound3 = 0, playerCostRound4 = 0, playerCostRound6 = 0;
+
+    // --- MAIN GAME FLOW ---
+    function setupGame() {
+        resetGameState();
+        createGrid(1); 
+        startPlayerTurn();
+    }
+    
+    function setupExpertChallenge() {
+        currentRound = 4;
+        hideResultsComparison();
+        startNextRoundBtn.style.display = 'none';
+        finishBtn.style.display = 'inline-block';
+        createGrid(2); 
+        startPlayerTurn();
+    }
+
+    function resetGameState() {
+        currentRound = 1; playerPath = []; playerCost = 0;
+        playerCostRound1 = 0; botPathCost = 0; travelingBotCost = 0;
+        playerCostRound3 = 0; playerCostRound4 = 0; playerCostRound6 = 0;
+        housesVisited = {h1: false, h2: false};
+        finishBtn.style.display = 'inline-block';
+        startNextRoundBtn.style.display = 'none';
+        finishBtn.disabled = true;
+        hideResultsComparison();
+    }
+
+    function updateRulesDisplay() {
+        if (currentRound >= 4) {
+            expertRules.style.display = 'block';
+        } else {
+            expertRules.style.display = 'none';
+        }
+    }
+
+    function startPlayerTurn() {
+        updateRulesDisplay();
+        clearVisualization();
+        playerPath = [{ ...startNode, costSoFar: 0 }];
+        playerVisited.clear();
+        playerVisited.add(`${startNode.row}-${startNode.col}`);
+        playerCost = 0; housesVisited = {h1: false, h2: false};
+        updatePlayerUI();
+        boardEl.addEventListener('click', handlePlayerMove);
+        finishBtn.disabled = true;
+        
+        switch (currentRound) {
+            case 1:
+                roundTitle.textContent = `Trainee Delivery 1: Your First Try!`;
+                messageBox.textContent = "Click a road next to your truck to start!";
+                finishBtn.textContent = 'Finish Delivery'; break;
+            case 3:
+                roundTitle.textContent = `Trainee Delivery 3: Beat the Bot!`;
+                messageBox.textContent = `The bot's cost was ${botPathCost}s. Can you beat it?`;
+                finishBtn.textContent = 'Finish Final Try'; break;
+            case 4:
+                roundTitle.textContent = `Expert Delivery 1: The Expert Challenge!`;
+                messageBox.textContent = `Find the fastest path to visit BOTH houses in any order.`;
+                finishBtn.textContent = 'Finish Route'; break;
+            case 6:
+                roundTitle.textContent = `Expert Delivery 3: Your Turn to Beat the Bot!`;
+                messageBox.textContent = `The bot's best route cost ${travelingBotCost}s. Find the fastest path to both houses!`;
+                finishBtn.textContent = 'Finish Route'; break;
+        }
+        grid[startNode.row][startNode.col].element.textContent = '🚚';
+    }
+
+    function startBotTurn() {
+        currentRound = 2; updateRulesDisplay();
+        boardEl.removeEventListener('click', handlePlayerMove);
+        roundTitle.textContent = "Trainee Delivery 2: The Bot's Turn!";
+        messageBox.textContent = "The bot is calculating the best route...";
+        clearPlayerPath(); 
+        grid[startNode.row][startNode.col].element.textContent = '🤖';
+        findShortestPathAStar(grid, startNode, endNode, (path) => {
+            botPathCost = path.length > 0 ? path[path.length - 1].g : 0;
+            animateBotPath(path, `The bot found a route in ${botPathCost}s! Watch how...`, () => {
+                showResultsComparison(2);
+                updateAndShowPopup(currentRound);
+            });
+        });
+    }
+
+    function startTravelingBotTurn() {
+        currentRound = 5; updateRulesDisplay();
+        boardEl.removeEventListener('click', handlePlayerMove);
+        roundTitle.textContent = "Expert Delivery 2: The Smart Bot!";
+        messageBox.textContent = "The bot is calculating BOTH possible routes...";
+        clearVisualization();
+        grid[startNode.row][startNode.col].element.textContent = '🤖';
+        
+        const findPathAsync = (start, end) => new Promise(resolve => {
+            let tempGrid = JSON.parse(JSON.stringify(grid.map(row => row.map(({element, ...rest}) => rest))));
+            findShortestPathAStar(tempGrid, start, end, path => resolve({
+                path, cost: path.length > 0 ? path[path.length - 1].g : Infinity
+            }));
+        });
+
+        let route1 = {}, route2 = {};
+        findPathAsync(startNode, endNode).then(path_S1 => {
+            route1.path_S1 = path_S1;
+            return findPathAsync(endNode, endNode2);
+        }).then(path_12 => {
+            route1.path_12 = path_12;
+            const route1Cost = route1.path_S1.cost + route1.path_12.cost;
+            const route1Path = route1.path_S1.path.concat(route1.path_12.path.slice(1));
+            
+            findPathAsync(startNode, endNode2).then(path_S2 => {
+                route2.path_S2 = path_S2;
+                return findPathAsync(endNode2, endNode);
+            }).then(path_21 => {
+                route2.path_21 = path_21;
+                const route2Cost = route2.path_S2.cost + route2.path_21.cost;
+                const route2Path = route2.path_S2.path.concat(route2.path_21.path.slice(1));
+
+                let bestPath, message;
+                if (route1Cost <= route2Cost) {
+                    travelingBotCost = route1Cost; bestPath = route1Path;
+                    message = `Bot chose H1 first! Optimal route cost: ${travelingBotCost}s.`;
+                } else {
+                    travelingBotCost = route2Cost; bestPath = route2Path;
+                    message = `Bot chose H2 first! Optimal route cost: ${travelingBotCost}s.`;
+                }
+                
+                animateBotPath(bestPath, message, () => {
+                    showResultsComparison(5);
+                    updateAndShowPopup(currentRound);
+                });
+            });
+        });
+    }
+
+    // --- EVENT LISTENERS ---
+    finishBtn.addEventListener('click', () => {
+        boardEl.removeEventListener('click', handlePlayerMove);
+        finishBtn.disabled = true;
+
+        switch (currentRound) {
+            case 1:
+                playerCostRound1 = playerCost; startBotTurn(); break;
+            case 3:
+                playerCostRound3 = playerCost;
+                let finalMessage = `Game Over! Your final cost: ${playerCost}s. Bot's cost: ${botPathCost}s. `;
+                if (playerCost < botPathCost) finalMessage += "You beat the bot! 🎉 Amazing!";
+                else if (playerCost === botPathCost) finalMessage += "It's a tie! Great job!";
+                else finalMessage += "The bot was faster. Try again next time!";
+                messageBox.textContent = finalMessage;
+                finishBtn.style.display = 'none';
+                startNextRoundBtn.textContent = 'Start Expert Delivery!';
+                startNextRoundBtn.style.display = 'inline-block'; 
+                showResultsComparison(3);
+                break;
+            case 4:
+                playerCostRound4 = playerCost;
+                startTravelingBotTurn(); break;
+            case 6:
+                playerCostRound6 = playerCost;
+                let expertFinalMessage = `Expert Cleared! Your route cost: ${playerCost}s. Bot's best cost: ${travelingBotCost}s. `;
+                if (playerCost < travelingBotCost) expertFinalMessage += "You beat the Traveling Bot! You're a pro! 🏆";
+                else if (playerCost === travelingBotCost) expertFinalMessage += "It's a perfect tie! Incredible!";
+                else expertFinalMessage += "The bot was faster. Great effort!";
+                messageBox.textContent = expertFinalMessage;
+                finishBtn.style.display = 'none';
+                startNextRoundBtn.textContent = "Play Again?";
+                startNextRoundBtn.style.display = 'inline-block'; 
+                showResultsComparison(6);
+                break;
+        }
+    });
+
+    function showPlayAgainOptions() {
+        popupTitle.textContent = "Play Again?";
+        popupBody.innerHTML = `
+            <p>Do you want to start over as a Trainee or jump right into the Expert deliveries?</p>
+            <div id="play-again-options">
+                <button id="play-trainee-btn" class="player-btn">Start as Trainee</button>
+                <button id="play-expert-btn" class="bot-btn">Start as Expert</button>
+            </div>
+        `;
+        document.getElementById('play-trainee-btn').onclick = () => { closePopup(false); setupGame(); };
+        document.getElementById('play-expert-btn').onclick = () => { closePopup(false); setupExpertChallenge(); };
+        
+        closePopupBtn.style.display = 'none';
+        closeXBtn.style.display = 'none';
+        algoExplanationContainer.style.display = 'none';
+        tspExplanationContainer.style.display = 'none';
+        popupOverlay.style.display = 'flex';
+    }
+    
+    startNextRoundBtn.addEventListener('click', () => {
+        const btnText = startNextRoundBtn.textContent;
+        hideResultsComparison();
+
+        if (btnText.includes("Play Again")) {
+            showPlayAgainOptions();
+            return;
+        }
+        if (btnText.includes("Expert")) {
+            setupExpertChallenge();
+            return;
+        }
+        
+        startNextRoundBtn.style.display = 'none';
+        finishBtn.style.display = 'inline-block';
+        startPlayerTurn();
+    });
+
+    function closePopup(resetButtons = true) {
+        popupOverlay.style.display = 'none';
+        
+        if (resetButtons) {
+            finishBtn.style.display = 'none';
+            startNextRoundBtn.style.display = 'inline-block';
+        }
+        
+        closePopupBtn.style.display = 'inline-block';
+        closeXBtn.style.display = 'block';
+        currentDemoStep = 0;
+        
+        if (currentRound === 2) {
+            currentRound = 3; startNextRoundBtn.textContent = 'Beat the Bot!';
+        } else if (currentRound === 5) {
+            currentRound = 6; startNextRoundBtn.textContent = "Start My Delivery!";
+        }
+    }
+    closePopupBtn.addEventListener('click', () => closePopup());
+    closeXBtn.addEventListener('click', () => closePopup());
+
+    // --- GRID & MAP GENERATION ---
+    function createGrid(numHouses) {
+        boardEl.innerHTML = '';
+        grid = Array.from({ length: GRID_SIZE }, () => []);
+        for (let r = 0; r < GRID_SIZE; r++) {
+            for (let c = 0; c < GRID_SIZE; c++) {
+                const el = document.createElement('div');
+                el.className = 'cell'; el.dataset.row = r; el.dataset.col = c;
+                boardEl.appendChild(el);
+                grid[r][c] = { element: el, r, c, cost: FAST_ROAD_COST, isObstacle: false };
+            }
+        }
+        if (numHouses === 1) generateMapLayout(); else generateTwoHouseLayout();
+    }
+
+    function generateMapLayout() {
+        let pathFound;
+        do {
+            grid.flat().forEach(cell => {
+                cell.isObstacle = false; cell.cost = FAST_ROAD_COST;
+                cell.element.className = 'cell road-fast'; cell.element.textContent = '';
+            });
+            startNode = { row: 0, col: 0 };
+            endNode = { row: GRID_SIZE - 1, col: GRID_SIZE - 1 };
+            endNode2 = null;
+            
+            for (let i = 0; i < OBSTACLE_COUNT; i++) {
+                let r, c;
+                do { r = ~~(Math.random() * GRID_SIZE); c = ~~(Math.random() * GRID_SIZE); }
+                while (grid[r][c].isObstacle || (r === startNode.row && c === startNode.col) || (r === endNode.row && c === endNode.col));
+                grid[r][c].isObstacle = true;
+                grid[r][c].element.classList.add('obstacle');
+                grid[r][c].element.textContent = ['🌳', '🏫', '🏛️', '⛲'][~~(Math.random()*4)];
+            }
+            pathFound = pathExistsCheck(grid, startNode, endNode);
+        } while (!pathFound);
+
+        for (let i = 0; i < SLOW_ROAD_COUNT; i++) {
+            let r, c;
+            do { r = ~~(Math.random() * GRID_SIZE); c = ~~(Math.random() * GRID_SIZE); }
+            while ((r === startNode.row && c === startNode.col) || (r === endNode.row && c === endNode.col) || grid[r][c].isObstacle || grid[r][c].cost !== FAST_ROAD_COST);
+            grid[r][c].cost = SLOW_ROAD_COST;
+            grid[r][c].element.classList.replace('road-fast', 'road-slow');
+        }
+        grid[endNode.row][endNode.col].element.textContent = '🏠';
+        grid[endNode.row][endNode.col].element.classList.add('end-node-style');
+    }
+    
+    function generateTwoHouseLayout() {
+        let pathFound1, pathFound2;
+        do {
+            grid.flat().forEach(cell => {
+                cell.isObstacle = false; cell.cost = FAST_ROAD_COST;
+                cell.element.className = 'cell road-fast'; cell.element.textContent = '';
+            });
+            startNode = { row: 0, col: 0 };
+            endNode = { row: GRID_SIZE - 1, col: GRID_SIZE - 1 };
+            endNode2 = { row: GRID_SIZE - 1, col: 0 };
+            
+            for (let i = 0; i < OBSTACLE_COUNT; i++) {
+                let r, c;
+                do { r = ~~(Math.random() * GRID_SIZE); c = ~~(Math.random() * GRID_SIZE); }
+                while (grid[r][c].isObstacle || isStartOrEnd(r, c, startNode, endNode, endNode2));
+                grid[r][c].isObstacle = true;
+                grid[r][c].element.classList.add('obstacle');
+                grid[r][c].element.textContent = ['🌳', '🏫', '🏛️', '⛲'][~~(Math.random()*4)];
+            }
+            pathFound1 = pathExistsCheck(grid, startNode, endNode);
+            pathFound2 = pathExistsCheck(grid, endNode, endNode2);
+        } while (!pathFound1 || !pathFound2);
+
+        for (let i = 0; i < SLOW_ROAD_COUNT; i++) {
+            let r, c;
+            do { r = ~~(Math.random() * GRID_SIZE); c = ~~(Math.random() * GRID_SIZE); }
+            while (isStartOrEnd(r, c, startNode, endNode, endNode2) || grid[r][c].isObstacle || grid[r][c].cost !== FAST_ROAD_COST);
+            grid[r][c].cost = SLOW_ROAD_COST;
+            grid[r][c].element.classList.replace('road-fast', 'road-slow');
+        }
+        grid[endNode.row][endNode.col].element.textContent = '🏠1';
+        grid[endNode.row][endNode.col].element.classList.add('end-node-style');
+        grid[endNode2.row][endNode2.col].element.textContent = '🏠2';
+        grid[endNode2.row][endNode2.col].element.classList.add('end-node-style');
+    }
+    
+    const isStartOrEnd = (r, c, s, e1, e2) => (r === s.row && c === s.col) || (r === e1.row && c === e1.col) || (e2 && r === e2.row && c === e2.col);
+    
+    // --- PLAYER LOGIC ---
+    function handlePlayerMove(e) {
+        const cellEl = e.target.closest('.cell');
+        if (!cellEl) return;
+        const row = +cellEl.dataset.row, col = +cellEl.dataset.col;
+        const clickedCell = grid[row][col];
+        if (clickedCell.isObstacle) return;
+        
+        const lastNode = playerPath[playerPath.length - 1];
+
+        // Player clicks on the previous square to "undo"
+        if (playerPath.length > 1 && row === playerPath[playerPath.length - 2].row && col === playerPath[playerPath.length - 2].col) {
+            const costOfRoadBack = grid[lastNode.row][lastNode.col].cost;
+            playerCost += costOfRoadBack;
+            playerPath.pop(); 
+            
+            if ((lastNode.row === endNode.row && lastNode.col === endNode.col) || (endNode2 && lastNode.row === endNode2.row && lastNode.col === endNode2.col)) {
+                boardEl.addEventListener('click', handlePlayerMove);
+            }
+
+            finishBtn.disabled = true;
+            messageBox.textContent = "Going back costs time!";
+            updatePlayerUI();
+            return;
+        }
+
+        if (Math.abs(row - lastNode.row) + Math.abs(col - lastNode.col) === 1) {
+            if (playerPath.some(p => p.row === row && p.col === col)) return;
+            playerCost += clickedCell.cost;
+            playerPath.push({ row, col, costSoFar: playerCost });
+            playerVisited.add(`${row}-${col}`);
+
+
+            switch (currentRound) {
+                case 1: case 3:
+                    if (row === endNode.row && col === endNode.col) {
+                        messageBox.textContent = `You reached the house! Total cost: ${playerCost}s.`;
+                        finishBtn.disabled = false; boardEl.removeEventListener('click', handlePlayerMove);
+                    }
+                    break;
+                case 4: case 6:
+                    if (row === endNode.row && col === endNode.col) housesVisited.h1 = true;
+                    if (row === endNode2.row && col === endNode2.col) housesVisited.h2 = true;
+                    
+                    if (housesVisited.h1 && housesVisited.h2) {
+                        messageBox.textContent = `You visited both houses! Total cost: ${playerCost}s.`;
+                        finishBtn.disabled = false; boardEl.removeEventListener('click', handlePlayerMove);
+                    } else if (housesVisited.h1) {
+                        messageBox.textContent = "You reached House 1! Now find House 2.";
+                    } else if (housesVisited.h2) {
+                        messageBox.textContent = "You reached House 2! Now find House 1.";
+                    }
+                    break;
+            }
+            updatePlayerUI();
+        }
+    }
+
+    // --- UI & VISUALIZATION ---
+    function updatePlayerUI() {
+        clearPlayerPath();
+        
+        playerVisited.forEach(coord => {
+            const [r, c] = coord.split('-').map(Number);
+            grid[r][c].element.classList.add('player-visited');
+        });
+
+        playerPath.forEach(p => {
+            const cell = grid[p.row][p.col];
+            cell.element.classList.add('player-path');
+            addIceCreamIconToCell(cell, p.costSoFar);
+        });
+        
+        const currentPlayerPos = playerPath[playerPath.length-1];
+        grid[currentPlayerPos.row][currentPlayerPos.col].element.textContent = '🚚';
+
+        costDisplay.textContent = `Cost: ${playerCost}s`;
+        const maxTipForRound = currentRound >= 4 ? 20.00 : 10.00;
+        const tipDenominator = currentRound >= 4 ? MAX_COST * 1.5 : MAX_COST;
+        const tip = Math.max(0, maxTipForRound - (playerCost / tipDenominator) * maxTipForRound);
+        tipMeterBar.style.width = `${(tip / maxTipForRound) * 100}%`;
+        tipDisplay.textContent = `Tip: $${tip.toFixed(2)}`;
+        iceCreamIcon.textContent = getIceCreamEmoji(playerCost);
+        moneyIcon.textContent = tip > (maxTipForRound * 0.75) ? '🤑' : tip > (maxTipForRound * 0.33) ? '🙂' : '😥';
+    }
+    
+    function hideResultsComparison() {
+        resultsComparisonEl.style.display = 'none';
+        resultsComparisonEl.innerHTML = '';
+    }
+
+    function showResultsComparison(completedRound) {
+        let html = '';
+        const traineeRound = completedRound <= 3;
+        const roundNum = traineeRound ? completedRound : completedRound - 3;
+
+        switch(completedRound) {
+            case 2:
+                html = `
+                    <h4>Trainee Delivery 1 vs. 2</h4>
+                    <p>Your Cost: <strong>${playerCostRound1}s</strong></p>
+                    <p>Bot's Cost: <strong>${botPathCost}s</strong></p>
+                `;
+                break;
+            case 3:
+                html = `
+                    <h4>Trainee Delivery Summary</h4>
+                    <ul>
+                      <li>Your First Try (TD 1): <strong>${playerCostRound1}s</strong></li>
+                      <li>Bot's Optimal (TD 2): <strong>${botPathCost}s</strong></li>
+                      <li>Your Final Try (TD 3): <strong>${playerCostRound3}s</strong></li>
+                    </ul>
+                `;
+                break;
+            case 5:
+                html = `
+                    <h4>Expert Delivery 1 vs. 2</h4>
+                    <p>Your TSP Cost: <strong>${playerCostRound4}s</strong></p>
+                    <p>Bot's TSP Cost: <strong>${travelingBotCost}s</strong></p>
+                `;
+                break;
+            case 6:
+                const didWinSimple = playerCostRound3 < botPathCost;
+                const didWinExpert = playerCostRound6 < travelingBotCost;
+                html = `
+                    <h3 style="font-family: 'Fredoka One', cursive; color: var(--player-dark); text-align: center;">Overall Results! 🍦🏆</h3>
+                    <h4>Trainee Delivery</h4>
+                    <ul>
+                        <li>Your First Try: ${playerCostRound1}s</li>
+                        <li>Bot's Best: ${botPathCost}s</li>
+                        <li>Your Final Try: ${playerCostRound3}s</li>
+                        <li><strong>Result:</strong> ${didWinSimple ? 'You beat the bot! 🎉' : 'The bot was faster!'}</li>
+                    </ul>
+                    <h4>Expert Delivery</h4>
+                    <ul>
+                        <li>Your First TSP Route: ${playerCostRound4}s</li>
+                        <li>Bot's Best TSP Route: ${travelingBotCost}s</li>
+                        <li>Your Final TSP Route: ${playerCostRound6}s</li>
+                        <li><strong>Result:</strong> ${didWinExpert ? 'You beat the expert bot! 🥳' : 'The expert bot won!'}</li>
+                    </ul>
+                    <p style="font-weight: 600; margin-top: 15px; text-align: center;">Great job playing Ice Cream Express! You've learned a lot about finding the best path!</p>
+                `;
+                break;
+        }
+        if (html) {
+            resultsComparisonEl.innerHTML = html;
+            resultsComparisonEl.style.display = 'block';
+        }
+    }
+
+
+    function updateAndShowPopup(round) {
+        algoExplanationContainer.style.display = 'none';
+        tspExplanationContainer.style.display = 'none';
+
+        if (round === 2) {
+            popupTitle.textContent = "Bot's Super Strategy: A* Search!";
+            popupBody.innerHTML = `<div class="popup-body-text">
+                <p>How does the bot instantly find the best path? It uses the <strong>A* (A-Star) Search</strong> algorithm, a powerful tool used in everything from Google Maps to video games!</p>
+                <p>Think of the bot as a smart hiker. For every possible step, it considers two things:</p>
+                <ul>
+                    <li><strong style="color:var(--bot-dark);">G-Cost:</strong> The actual cost (path taken) from the start. This is the known past.</li>
+                    <li><strong style="color:var(--player-dark);">H-Cost:</strong> A smart guess (heuristic) of the distance to the goal. This is a guess about the future.</li>
+                </ul>
+                <p>It adds them to get the <strong>F-Cost (g + h)</strong>. The bot always explores the path with the lowest F-Cost, making it incredibly efficient!</p>
+                <p><strong>Real-World Uses:</strong> A* is used in <strong>Google Maps</strong> to find driving directions, in <strong>robotics</strong> for navigation, and in many <strong>video games</strong> to help characters navigate the world intelligently.</p>
+            </div>`;
+            closePopupBtn.textContent = "Got It! Let's Play Round 3!";
+            algoExplanationContainer.style.display = 'block';
+            setupAStarDemo();
+        } else if (round === 5) {
+            popupTitle.textContent = "The Traveling Salesperson Problem!";
+            popupBody.innerHTML = `<div class="popup-body-text">
+                <p>The bot just solved a small version of the famous <strong>Traveling Salesperson Problem (TSP)</strong>. The goal of TSP isn't just to get from A to B, but to find the most efficient <strong>order</strong> to visit multiple locations.</p>
+                <p>Your bot solved it by checking every possibility and comparing the total costs. While this works for 2 houses, this problem gets very hard, very fast! With 5 stops, there are 120 possible routes. With 10 stops, there are over 1.8 million!</p>
+                <p><strong>Real-World Uses:</strong> TSP algorithms are crucial for logistics! They are used by <strong>Amazon and FedEx</strong> to plan delivery routes, by <strong>airlines</strong> to schedule flights, and even to plan the most efficient way to build things like microchips.</p>
+            </div>`;
+            closePopupBtn.textContent = "Start My Delivery!";
+            tspExplanationContainer.style.display = 'block';
+            setupTSPDemo();
+        }
+        popupOverlay.style.display = 'flex';
+    }
+
+    function animateBotPath(path, message, onComplete) {
+        messageBox.textContent = message;
+        let i = 0;
+        const id = setInterval(() => {
+            if (i < path.length) {
+                const cell = path[i];
+                grid[cell.r][cell.c].element.classList.add('bot-path');
+                addIceCreamIconToCell(grid[cell.r][cell.c], cell.g);
+                i++;
+            } else {
+                clearInterval(id);
+                if (onComplete) onComplete();
+            }
+        }, 80);
+    }
+    
+    function clearVisualization() {
+        grid.flat().forEach(cell => {
+            cell.element.classList.remove('player-path', 'player-visited', 'visited', 'bot-path');
+            let existingIcon = cell.element.querySelector('.path-icon');
+            if (existingIcon) existingIcon.remove();
+            if (cell.isObstacle) return;
+            cell.element.textContent = '';
+            if (endNode && cell.r === endNode.row && cell.c === endNode.col) {
+                cell.element.textContent = currentRound >= 4 ? '🏠1' : '🏠';
+            }
+            if (endNode2 && cell.r === endNode2.row && cell.c === endNode2.col) {
+                cell.element.textContent = '🏠2';
+            }
+        });
+    }
+
+    function clearPlayerPath() {
+         grid.flat().forEach(cell => {
+            cell.element.classList.remove('player-path', 'player-visited');
+            if (isStartOrEnd(cell.r, cell.c, startNode, endNode, endNode2) || cell.isObstacle) {} 
+            else { cell.element.textContent = ''; }
+            let existingIcon = cell.element.querySelector('.path-icon');
+            if (existingIcon) existingIcon.remove();
+         });
+    }
+    
+    const getIceCreamEmoji = (cost) => cost > MAX_COST * 0.7 ? '💧' : cost > MAX_COST * 0.4 ? '🍨' : '🍦';
+
+    function addIceCreamIconToCell(cell, currentTotalCost) {
+        let existingIcon = cell.element.querySelector('.path-icon');
+        if (existingIcon) existingIcon.remove();
+        if (cell.isObstacle || isStartOrEnd(cell.r, cell.c, startNode, endNode, endNode2)) return;
+        const iconEl = document.createElement('span');
+        iconEl.className = 'path-icon';
+        iconEl.textContent = getIceCreamEmoji(currentTotalCost);
+        cell.element.appendChild(iconEl);
+    }
+
+    // --- A* ALGORITHM & HELPERS ---
+    function findShortestPathAStar(targetGrid, sNode, eNode, callback, forDemo = false) {
+        const gridData = targetGrid.map(row => row.map(cell => ({...cell, cameFrom: null, g: Infinity, h: Infinity, f: Infinity})));
+        const start = gridData[sNode.row][sNode.col];
+        const end = gridData[eNode.row][eNode.col];
+        start.g = 0; start.h = heuristic(start, end); start.f = start.h;
+        
+        const openSet = [start], closedSet = new Set();
+        let pathFound = false, animationSteps = [];
+        
+        while (openSet.length > 0) {
+            openSet.sort((a, b) => a.f - b.f);
+            let current = openSet.shift();
+            if (current.r === end.r && current.c === end.c) { pathFound = true; break; }
+            closedSet.add(`${current.r}-${current.c}`);
+            
+            if (forDemo) {
+                let stepState = {
+                    current: { r: current.r, c: current.c },
+                    neighbors: [], path: []
+                };
+                let tempPath = []; let temp = current;
+                while (temp) { tempPath.unshift({r:temp.r, c:temp.c}); temp = temp.cameFrom; }
+                stepState.path = tempPath;
+                animationSteps.push(stepState);
+            }
+
+            for (const nData of getNeighbors(current, gridData)) {
+                if (nData.isObstacle || closedSet.has(`${nData.r}-${nData.c}`)) continue;
+                let tempG = current.g + nData.cost;
+                
+                if (forDemo) animationSteps[animationSteps.length -1].neighbors.push({...nData, currentG: tempG});
+                
+                if (tempG < nData.g) {
+                    nData.cameFrom = current; nData.g = tempG; 
+                    nData.h = nData.h === Infinity ? heuristic(nData, end) : nData.h;
+                    nData.f = nData.g + nData.h;
+                    if (!openSet.find(node => node.r === nData.r && node.c === nData.c)) openSet.push(nData);
+                }
+            }
+        }
+        if (pathFound) {
+            const path = []; let temp = gridData[eNode.row][eNode.col];
+            while (temp) { path.unshift(temp); temp = temp.cameFrom; }
+            if (callback) callback(path, animationSteps);
+        } else {
+            if (callback) callback([]);
+        }
+    }
+
+    function pathExistsCheck(currentGrid, sNode, eNode) {
+        if (!sNode || !eNode) return false;
+        const q = [{row: sNode.row, col: sNode.col}], visited = new Set([`${sNode.row},${sNode.col}`]);
+        while (q.length > 0) {
+            const { row, col } = q.shift();
+            if (row === eNode.row && col === eNode.col) return true;
+            for (const n of getNeighbors({r:row,c:col}, currentGrid)) {
+                if (!visited.has(`${n.r},${n.c}`) && !n.isObstacle) {
+                    visited.add(`${n.r},${n.c}`); q.push({ row: n.r, col: n.c });
+                }
+            }
+        }
+        return false;
+    }
+
+    const heuristic = (a, b) => Math.abs(a.r - b.r) + Math.abs(a.c - b.c);
+    const getNeighbors = (n, currentGrid) => { 
+        const ns = [], { r, c } = n, size = currentGrid.length;
+        if (r > 0) ns.push(currentGrid[r-1][c]); 
+        if (r < size-1) ns.push(currentGrid[r+1][c]); 
+        if (c > 0) ns.push(currentGrid[r][c-1]); 
+        if (c < size-1) ns.push(currentGrid[r][c+1]); 
+        return ns.filter(Boolean);
+    };
+
+    // --- A* DEMO LOGIC ---
+    function setupAStarDemo() {
+        miniGameBoard.innerHTML = '';
+        const MINI_GRID_SIZE = 5;
+        const demoStartNode = { row: 0, col: 0 };
+        const demoEndNode = { row: MINI_GRID_SIZE - 1, col: MINI_GRID_SIZE - 1 };
+        demoGrid = Array.from({ length: MINI_GRID_SIZE }, (_, r) => Array.from({ length: MINI_GRID_SIZE }, (_, c) => {
+            const el = document.createElement('div');
+            el.className = 'cell road-fast'; el.dataset.row = r; el.dataset.col = c;
+            miniGameBoard.appendChild(el);
+            return { element: el, r, c, cost: FAST_ROAD_COST, isObstacle: false };
+        }));
+        
+        demoGrid[1][1].isObstacle = true; demoGrid[1][1].element.classList.add('obstacle'); demoGrid[1][1].element.textContent = '🌳';
+        demoGrid[2][1].isObstacle = true; demoGrid[2][1].element.classList.add('obstacle'); demoGrid[2][1].element.textContent = '🌳';
+        demoGrid[0][1].cost = SLOW_ROAD_COST; demoGrid[0][1].element.classList.replace('road-fast', 'road-slow');
+        demoGrid[1][0].cost = SLOW_ROAD_COST; demoGrid[1][0].element.classList.replace('road-fast', 'road-slow');
+        
+        demoGrid[demoStartNode.row][demoStartNode.col].element.textContent = '🤖';
+        demoGrid[demoEndNode.row][demoEndNode.col].element.textContent = '🏠';
+        demoGrid[demoEndNode.row][demoEndNode.col].element.classList.add('end-node-style');
+
+        findShortestPathAStar(demoGrid, demoStartNode, demoEndNode, (path, steps) => {
+            demoPath = steps || [];
+            currentDemoStep = 0;
+            updateAStarDemoUI();
+        }, true);
+        nextStepBtn.onclick = () => { currentDemoStep = Math.min(demoPath.length - 1, currentDemoStep + 1); updateAStarDemoUI(); };
+        prevStepBtn.onclick = () => { currentDemoStep = Math.max(0, currentDemoStep - 1); updateAStarDemoUI(); };
+    }
+
+    function updateAStarDemoUI() {
+        demoGrid.flat().forEach(cell => {
+            cell.element.classList.remove('current-bot-pos', 'next-consider', 'chosen-next-step', 'bot-path');
+            let oldLabels = cell.element.querySelectorAll('.cost-label');
+            oldLabels.forEach(label => label.remove());
+        });
+
+        if (demoPath.length === 0 || !demoPath[currentDemoStep]) {
+            explanationText.textContent = "Could not find a path for the demo.";
+            nextStepBtn.disabled = true; prevStepBtn.disabled = true; return;
+        }
+
+        const step = demoPath[currentDemoStep];
+        const currentBotCell = demoGrid[step.current.r][step.current.c];
+        currentBotCell.element.classList.add('current-bot-pos');
+        
+        step.path.forEach(p => demoGrid[p.r][p.c].element.classList.add('bot-path'));
+        
+        let lowestF = Infinity, chosenNeighborPos = null;
+        step.neighbors.forEach(n => {
+            const neighborCell = demoGrid[n.r][n.c];
+            if (!neighborCell.isObstacle) {
+                neighborCell.element.classList.add('next-consider');
+                const g = n.currentG;
+                const h = heuristic(neighborCell, demoGrid[demoGrid.length-1][demoGrid.length-1]);
+                const f = g + h;
+                if (f < lowestF) { lowestF = f; chosenNeighborPos = {r: n.r, c: n.c}; }
+                let costLabel = document.createElement('div');
+                costLabel.className = 'cost-label';
+                costLabel.innerHTML = `<span class="g-cost">g:${g}</span><span class="h-cost">h:${h}</span><span class="f-cost">f:${f}</span>`;
+                neighborCell.element.appendChild(costLabel);
+            }
+        });
+        
+        if (chosenNeighborPos) {
+              const chosenCell = demoGrid[chosenNeighborPos.r][chosenNeighborPos.c];
+              chosenCell.element.classList.remove('next-consider');
+              chosenCell.element.classList.add('chosen-next-step');
+        }
+
+        explanationText.innerHTML = `Bot is at (${step.current.r},${step.current.c}). It checks neighbors and picks the one with the lowest <strong>F-Cost</strong>.`;
+        if (step.current.r === 4 && step.current.c === 4) explanationText.innerHTML = "Bot reached the house! 🎉";
+        
+        nextStepBtn.disabled = currentDemoStep >= demoPath.length - 2;
+        prevStepBtn.disabled = currentDemoStep === 0;
+
+        demoGrid[4][4].element.textContent = '🏠';
+        demoGrid[0][0].element.textContent = '🤖';
+    }
+
+    // --- TSP DEMO LOGIC ---
+    function setupTSPDemo() {
+        const MINI_GRID_SIZE = 5;
+        const s = { row: 0, col: 0 }, h1 = { row: 4, col: 1 }, h2 = { row: 2, col: 4 };
+
+        const createBoard = (container) => {
+            container.innerHTML = '';
+            return Array.from({ length: MINI_GRID_SIZE }, (_, r) => Array.from({ length: MINI_GRID_SIZE }, (_, c) => {
+                const el = document.createElement('div');
+                el.className = 'cell road-fast';
+                container.appendChild(el);
+                return { element: el, r, c, cost: FAST_ROAD_COST, isObstacle: false };
+            }));
+        };
+
+        const boardA = createBoard(tspMiniBoardA);
+        const boardB = createBoard(tspMiniBoardB);
+        const sharedGrid = boardA.map(row => row.map(({element, ...rest}) => rest));
+        
+        for (let r = 0; r < MINI_GRID_SIZE; r++) {
+            for (let c = 2; c < MINI_GRID_SIZE; c++) {
+                if (isStartOrEnd(r,c,s,h1,h2)) continue;
+                sharedGrid[r][c].cost = SLOW_ROAD_COST;
+            }
+        }
+        sharedGrid[3][3].isObstacle = true;
+
+        [boardA, boardB].forEach(board => {
+            board.forEach((row, r) => row.forEach((cell, c) => {
+                cell.isObstacle = sharedGrid[r][c].isObstacle;
+                cell.cost = sharedGrid[r][c].cost;
+                if (cell.isObstacle) cell.element.classList.add('obstacle');
+                if (cell.cost === SLOW_ROAD_COST) cell.element.classList.replace('road-fast', 'road-slow');
+                if (!cell.isObstacle && !isStartOrEnd(r,c,s,h1,h2)) {
+                    const costLabel = document.createElement('div');
+                    costLabel.className = 'tsp-cost-label';
+                    costLabel.textContent = cell.cost;
+                    cell.element.appendChild(costLabel);
+                }
+            }));
+            board[s.row][s.col].element.textContent = '🤖';
+            board[h1.row][h1.col].element.textContent = '🏠1';
+            board[h2.row][h2.col].element.textContent = '🏠2';
+        });
+
+        let path_s_h1, cost_s_h1, path_s_h2, cost_s_h2, path_h1_h2, cost_h1_h2, path_h2_h1, cost_h2_h1;
+        
+        const drawPathWithArrows = (path, board) => {
+            for (let i = 0; i < path.length; i++) {
+                const p = path[i];
+                const cellEl = board[p.r][p.c].element;
+                cellEl.classList.add('bot-path');
+                
+                if (i > 0) {
+                    const prev_p = path[i-1];
+                    const arrow = document.createElement('div');
+                    arrow.className = 'path-arrow';
+                    arrow.textContent = '▶';
+                    if (p.r < prev_p.r) arrow.classList.add('arrow-up');
+                    else if (p.r > prev_p.r) arrow.classList.add('arrow-down');
+                    else if (p.c < prev_p.c) arrow.classList.add('arrow-left');
+                    else arrow.classList.add('arrow-right');
+                    cellEl.appendChild(arrow);
+                }
+            }
+        };
+
+        const clearBoardPaths = (board) => {
+            board.flat().forEach(cell => {
+                cell.element.classList.remove('bot-path');
+                const arrows = cell.element.querySelectorAll('.path-arrow');
+                arrows.forEach(a => a.remove());
+            });
+        };
+
+        findShortestPathAStar(sharedGrid, s, h1, path => { path_s_h1 = path; cost_s_h1 = path.length > 0 ? path[path.length-1].g : Infinity; });
+        findShortestPathAStar(sharedGrid, s, h2, path => { path_s_h2 = path; cost_s_h2 = path.length > 0 ? path[path.length-1].g : Infinity; });
+        findShortestPathAStar(sharedGrid, h1, h2, path => { path_h1_h2 = path; cost_h1_h2 = path.length > 0 ? path[path.length-1].g : Infinity; });
+        findShortestPathAStar(sharedGrid, h2, h1, path => { path_h2_h1 = path; cost_h2_h1 = path.length > 0 ? path[path.length-1].g : Infinity; });
+
+        const totalCostA = cost_s_h1 + cost_h1_h2;
+        const totalCostB = cost_s_h2 + cost_h2_h1;
+
+        calcRouteABtn.disabled = false; calcRouteBBtn.disabled = true; compareTspBtn.disabled = true;
+        tspCostA.textContent = "Cost: ?"; tspCostB.textContent = "Cost: ?";
+        tspExplanationText.textContent = "It's faster to go to 🏠1 first (fast roads) than 🏠2 (slow neighborhood). Calculate Route A.";
+        tspRouteAContainer.classList.remove('winner'); tspRouteBContainer.classList.remove('winner');
+        clearBoardPaths(boardA); clearBoardPaths(boardB);
+
+
+        calcRouteABtn.onclick = () => {
+            clearBoardPaths(boardA);
+            drawPathWithArrows(path_s_h1, boardA); drawPathWithArrows(path_h1_h2, boardA);
+            tspCostA.textContent = `Cost: ${totalCostA}`;
+            tspExplanationText.textContent = `Route A (🤖 → 🏠1 → 🏠2) costs ${cost_s_h1} + ${cost_h1_h2} = ${totalCostA}. Now calculate Route B.`;
+            calcRouteABtn.disabled = true; calcRouteBBtn.disabled = false;
+        };
+        calcRouteBBtn.onclick = () => {
+            clearBoardPaths(boardB);
+            drawPathWithArrows(path_s_h2, boardB); drawPathWithArrows(path_h2_h1, boardB);
+            tspCostB.textContent = `Cost: ${totalCostB}`;
+            tspExplanationText.textContent = `Route B (🤖 → 🏠2 → 🏠1) costs ${cost_s_h2} + ${cost_h2_h1} = ${totalCostB}. Which is better?`;
+            calcRouteBBtn.disabled = true; compareTspBtn.disabled = false;
+        };
+        compareTspBtn.onclick = () => {
+            if (totalCostA <= totalCostB) {
+                tspRouteAContainer.classList.add('winner');
+                tspRouteBContainer.classList.remove('winner');
+                tspExplanationText.textContent = `Route A is the winner! Its cost (${totalCostA}) is lower because the first stop was much faster.`;
+            } else {
+                tspRouteBContainer.classList.add('winner');
+                tspRouteAContainer.classList.remove('winner');
+                tspExplanationText.textContent = `Route B is the winner! Its cost (${totalCostB}) is lower.`;
+            }
+            compareTspBtn.disabled = true;
+            calcRouteABtn.disabled = false;
+            calcRouteBBtn.disabled = false;
+        }
+    }
+
+    // --- INITIALIZE GAME ---
+    setupGame();
+});
+</script>
+
+<script type="module">
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+
+  // Your web app's Firebase configuration
+  // IMPORTANT: Replace with your actual, new API key
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY_HERE",
+    authDomain: "icecreamexpress-6591d.firebaseapp.com",
+    projectId: "icecreamexpress-6591d",
+    storageBucket: "icecreamexpress-6591d.firebasestorage.app",
+    messagingSenderId: "428791114035",
+    appId: "1:428791114035:web:c6b6390ad0043effc6f646",
+    measurementId: "G-L0NGWZ8T9R"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
+  
+  console.log("Firebase has been initialized!");
+</script>
+
+</body>
+</html>
