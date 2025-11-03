@@ -10,12 +10,18 @@
     <style>
         :root {
             --road-fast: #f5f5f5;
-            --road-slow: #e6bf83;
-            --obstacle: #d0d9e6;
-            --bot-path: #64b5f6;
+            --road-slow: #e6bf83; 
+            --obstacle: #d0d9e6;  
+            
+            /* Thematic A* Viz Colors */
+            --bot-path: #1976D2;        /* Dark Blue - Final Path */
+            --visited: #b3e5fc;         /* Light Blue - To-Check List (Open Set) */
+            --current-node: #1976D2;    /* Dark Blue - Checking NOW! */
+            --closed-set-node: #d0d9e6; /* Grey - Already Checked (Closed Set) */
+
+            
             --player-path: #f06292;
-            --player-visited: #f8bbd0; /* Light pink for visited paths */
-            --visited: #b3e5fc;
+            --player-visited: #f8bbd0;
             --border: #a1887f;
             --player-dark: #c2185b;
             --bot-dark: #1976d2;
@@ -28,7 +34,6 @@
             --success-green-dark: #388E3C;
             --neutral-grey: #78909c;
             --neutral-grey-dark: #455a64;
-            /* Added overlay background variable */
             --overlay-bg: rgba(250, 250, 250, 0.85);
         }
 
@@ -56,14 +61,12 @@
         }
         #app-container > h1 { margin-bottom: 5px; }
 
-
         .nav-buttons { display: flex; flex-direction: column; gap: 15px; margin-top: 25px; }
         .nav-buttons button:not(.tutorial-btn) { width: 100%; font-size: 1.3em; padding: 16px; }
 
         .level-intro { background: var(--white); border-radius: 12px; padding: 15px 20px; text-align: left; border: 1px solid #eee; margin-bottom: 5px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
         .level-intro h3 { font-family: 'Fredoka One', cursive; color: var(--player-dark); margin: 0 0 10px 0; font-size: 1.4em; border-bottom: 2px solid var(--player-path); padding-bottom: 5px; }
         .level-intro p { font-size: 0.95em; line-height: 1.5; margin: 0 0 10px 0; }
-        .level-intro.level-2 h3 { color: var(--bot-dark); border-bottom-color: var(--bot-path); }
         .level-intro ul { padding-left: 20px; list-style: '✔ '; margin: 0; font-size: 0.9em; list-style-position: inside; }
         .level-intro li { margin-bottom: 6px; padding-left: 5px; }
         .level-intro ul ul { margin-top: 5px; padding-left: 15px; list-style: '🔸 '; }
@@ -88,7 +91,6 @@
             margin: 5px auto 15px auto; 
             display: inline-block; 
             width: auto; 
-            /* Use neutral color */
             background-color: var(--neutral-grey); 
             box-shadow: 0 4px var(--neutral-grey-dark);
         }
@@ -99,7 +101,7 @@
         
         /* --- INTRO CAROUSEL STYLES --- */
         #intro-popup-overlay { 
-            background-color: var(--overlay-bg); /* Use variable */
+            background-color: var(--overlay-bg);
             backdrop-filter: blur(5px); 
             z-index: 2001; 
         }
@@ -129,18 +131,44 @@
         .cell { border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: clamp(18px, 4vw, 26px); user-select: none; cursor: pointer; transition: transform 0.2s, background-color 0.3s; position: relative; }
         .cell .path-icon { position: absolute; width: 60%; height: 60%; bottom: 2px; right: 2px; opacity: 0.8; }
         .cell.road-fast { background-color: var(--road-fast); }
-        .cell.road-slow { background-color: var(--road-slow); }
+        .cell.road-slow { background-color: var(--road-slow); } 
         .cell.obstacle { background-color: var(--obstacle); cursor: not-allowed; }
-        .cell.player-visited { background-color: var(--player-visited); } /* Light pink */
-        .cell.player-path { background-color: var(--player-path); } /* Dark pink */
-        .cell.bot-path { background-color: var(--bot-path); }
-        .cell.visited { background-color: var(--visited); }
+        .cell.player-visited { background-color: var(--player-visited); }
+        .cell.player-path { background-color: var(--player-path); }
+        
+        /* NEW A* VIZ STYLES */
+        .cell.bot-path { background-color: var(--bot-path); } /* Dark Blue */
+        .cell.visited { background-color: var(--closed-set-node); } /* Light Grey */
+        .cell.next-consider { background-color: var(--visited); } /* Light Blue */
+        .cell.current-bot-pos { 
+            background-color: var(--current-node); /* Dark Blue */
+            color: white;
+            transform: scale(1.1); 
+            box-shadow: 0 0 10px var(--current-node); 
+            z-index: 10;
+        }
+        
         .cell.end-node-style { background: var(--unicorn-gradient) !important; border-radius: 50%; transform: scale(1.1); color: var(--text-dark); }
         #controls-info { background: var(--white); padding: 20px; border-radius: 20px; box-shadow: 0 4px 15px var(--shadow); width: 100%; max-width: 540px; border: 1px solid #eee; }
         #info-header { padding: 10px; border-radius: 12px; margin-bottom: 15px; transition: background-color 0.5s ease; background: var(--unicorn-gradient); }
         #info-header h2 { color: white; text-shadow: 1px 1px 3px rgba(0,0,0,0.5); }
         #round-title { font-family: 'Fredoka One', cursive; font-size: 1.6em; margin: 0; }
-        .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; align-items: center; margin-bottom: 15px; font-weight: 600; font-size: 1.1em; }
+        .stats-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 15px; 
+            align-items: center; 
+            margin-bottom: 15px; 
+            font-weight: 600; 
+            font-size: 1.1em; 
+        }
+        @media (min-width: 400px) {
+            .stats-grid { grid-template-columns: 1fr 1fr 1fr; }
+            #cost-display { grid-column: 1; }
+            #time-display { grid-column: 2; }
+            #tip-display { grid-column: 3; }
+        }
+        #time-display span { display: inline-block; width: 1.2em; text-align: center; }
         .meter-container { grid-column: 1 / -1; text-align: left; font-family: 'Fredoka One', cursive; }
         .meter-label { display: flex; justify-content: space-between; align-items: center; font-size: 1em; padding: 0 5px 5px 5px; }
         .meter-label .icon-group { display: flex; align-items: center; }
@@ -149,33 +177,47 @@
         .bar-inner { height: 100%; transition: width 0.5s ease-out; border-radius: 9.5px; }
         .bar-inner.player-bar { background: linear-gradient(90deg, #f48fb1, var(--player-path)); }
         #message-box { font-size: 1.1em; font-weight: 600; min-height: 40px; margin: 20px 0; }
-        #controls-info .button-group button { font-size: 1.1em; padding: 14px 30px; } 
+        
+        /* Updated Button Group */
+        #controls-info .button-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        #controls-info .button-group button { 
+            font-size: 1.1em; 
+            padding: 14px;
+            width: 100%;
+        }
+        #controls-info .button-group #rewatch-bot-btn {
+             font-size: 1.0em;
+             padding: 12px;
+        }
+
 
         #results-comparison { text-align: left; margin-top: 20px; padding: 15px; background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; }
         #results-comparison h4 { font-family: 'Fredoka One', cursive; margin: 0 0 10px 0; color: var(--bot-dark); }
-        #results-comparison ul { list-style: '🔸 '; padding-left: 20px; }
-        #results-comparison li { padding-left: 8px; margin-bottom: 5px; }
+        #results-comparison p { margin: 5px 0; font-weight: 600; }
+        #results-comparison p span { font-weight: normal; }
 
-        /* --- UPDATED POPUP OVERLAY STYLES --- */
+        /* --- POPUP OVERLAY STYLES --- */
         .popup-overlay { 
             position: fixed; 
             top: 0; 
             left: 0; 
             width: 100%; 
             height: 100%; 
-            /* Use the overlay background and blur */
             background-color: var(--overlay-bg);
             backdrop-filter: blur(5px);
-            z-index: 1000; /* Default z-index */
+            z-index: 1000;
             display: flex; 
             justify-content: center; 
             align-items: center; 
             padding: 20px; 
         } 
-        /* Ensure specific popups have higher z-index if needed */
         #intro-popup-overlay { z-index: 2001; }
         #rules-popup-overlay { z-index: 1500; } 
-        #popup-overlay { z-index: 1000; } /* Algorithm popup - ensure it uses the overlay style */
+        #popup-overlay, #pre-bot-popup { z-index: 1000; } /* Main popup and new intro popup */
 
         .popup-content { 
             background: var(--white); 
@@ -195,59 +237,172 @@
         .popup-content h3 { font-family: 'Fredoka One', cursive; font-size: 2.2em; margin-top: 0; color: var(--bot-dark); }
         .popup-content .popup-body-text { text-align: left; line-height: 1.7; font-size: 1.1em; max-width: 800px; margin: 15px auto; }
         .popup-content ul { max-width: 800px; margin: 15px auto; text-align: left;}
-        .popup-content strong { color: var(--bot-path); }
+        .popup-content strong { color: var(--bot-dark); }
+        .popup-content .popup-body-text .color-key { /* For A* explanation */
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid #777;
+            vertical-align: middle;
+            margin: 0 5px;
+        }
+        
+        /* RESTORED: A* Mini-Demo styles */
         .algorithm-explanation { margin-top: 25px; padding-top: 25px; border-top: 1px dashed #ccc;}
-        .algorithm-explanation h4 { font-family: 'Fredoka One', cursive; color: var(--bot-path); font-size: 1.6em; margin-bottom: 15px;}
+        .algorithm-explanation h4 { font-family: 'Fredoka One', cursive; color: var(--bot-dark); font-size: 1.6em; margin-bottom: 15px;}
         #algorithm-demo { display: flex; flex-direction: column; align-items: center; margin: 20px auto; gap: 25px; max-width: 900px; }
-        #mini-game-board, .tsp-mini-board { display: grid; grid-template-columns: repeat(5, 50px); grid-template-rows: repeat(5, 50px); gap: 2px; background-color: var(--border); border: 4px solid var(--border); border-radius: 8px; padding: 4px; flex-shrink: 0; }
-        #mini-game-board .cell, .tsp-mini-board .cell { width: 50px; height: 50px; font-size: 1em; border-radius: 4px; position: relative; }
-        #mini-game-board .cell.current-bot-pos { background-color: var(--bot-path); transform: scale(1.1); box-shadow: 0 0 8px var(--bot-path); z-index: 1; }
-        #mini-game-board .cell.next-consider { background-color: var(--visited); animation: pulse-consider 1s infinite alternate; }
-        #mini-game-board .cell.chosen-next-step { background-color: var(--success-green) !important; transform: scale(1.15); box-shadow: 0 0 10px var(--success-green); z-index: 2; }
-        .cost-label { position: absolute; bottom: 0; right: 0; background: rgba(255,255,255,0.8); padding: 2px 4px; font-size: 0.7em; border-radius: 3px; line-height: 1; color: var(--text-dark); font-weight: 600; }
+        #mini-game-board { display: grid; grid-template-columns: repeat(5, 50px); grid-template-rows: repeat(5, 50px); gap: 2px; background-color: var(--border); border: 4px solid var(--border); border-radius: 8px; padding: 4px; flex-shrink: 0; }
+        #mini-game-board .cell { width: 50px; height: 50px; font-size: 1em; border-radius: 4px; position: relative; }
+        #demo-controls { margin-top: 15px; display: flex; flex-direction: column; gap: 10px; }
+        #explanation-text { text-align: center; margin-top: 15px; font-size: 1.1em; min-height: 50px; font-weight: 600; }
+        #popup-button-group { display: flex; flex-wrap: wrap; justify-content: center; gap: 15px; margin-top: 20px; }
+        #popup-button-group button { margin-top: 0; }
+        @media (min-width: 950px) { 
+            #algorithm-demo { flex-direction: row; align-items: flex-start; }
+        }
+
+        /* A* Cost Labels (for both demos) */
+        .cost-label { 
+            position: absolute; 
+            top: 1px;
+            left: 1px;
+            background: rgba(255,255,255,0.9); 
+            padding: 1px 3px; 
+            font-size: clamp(0.4em, 2vw, 0.6em); 
+            border-radius: 3px; 
+            line-height: 1.1; 
+            color: var(--text-dark); 
+            font-weight: 600; 
+            text-align: left;
+            z-index: 5;
+        }
         .cost-label span { display: block; }
         .cost-label .g-cost { color: var(--bot-dark); }
         .cost-label .h-cost { color: var(--player-dark); }
         .cost-label .f-cost { color: var(--success-green); font-weight: bold; }
-        .tsp-cost-label { position: absolute; top: 2px; left: 3px; font-size: 0.8em; color: #757575; font-weight: 600; opacity: 0.9; }
-        @keyframes pulse-consider { from { opacity: 0.6; } to { opacity: 1; } }
-        #demo-controls { margin-top: 15px; display: flex; flex-direction: column; gap: 10px; }
-        #explanation-text { text-align: center; margin-top: 15px; font-size: 1.1em; min-height: 50px; }
-        #tsp-demo-layout { display: flex; flex-direction: column; align-items: center; gap: 20px; }
-        .tsp-route-container { display: flex; flex-direction: column; align-items: center; gap: 10px; }
-        .tsp-route-container h5 { font-family: 'Fredoka One', cursive; margin: 0; font-size: 1.2em; }
-        #tsp-boards { display: flex; flex-wrap: wrap; justify-content: center; gap: 20px; }
-        #tsp-controls { display: flex; gap: 15px; margin-top: 15px; }
-        .tsp-route-container.winner { border: 4px solid var(--success-green); border-radius: 12px; padding: 10px; background-color: #f1f8e9; }
-        #tsp-explanation-text { font-size: 1.1em; font-weight: 600; min-height: 3em; margin-top: 15px; }
-        .path-arrow { position: absolute; font-size: 1.2em; color: var(--white); text-shadow: 1px 1px 2px rgba(0,0,0,0.5); pointer-events: none; transition: transform 0.2s; }
-        .arrow-up { transform: rotate(-90deg); }
-        .arrow-down { transform: rotate(90deg); }
-        .arrow-left { transform: rotate(180deg); }
-        .arrow-right { transform: rotate(0deg); }
+        
         #play-again-options { display: flex; gap: 15px; justify-content: center; }
 
         #wrap-up-popup .popup-content { max-width: 650px; }
         #wrap-up-performance { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: left; }
         #wrap-up-performance h4 { font-family: 'Fredoka One', cursive; margin: 0 0 10px 0; color: var(--text-dark); font-size: 1.3em; text-align: center; }
-        #wrap-up-performance p { margin: 5px 0; font-size: 1.1em; }
+        #wrap-up-performance p { margin: 8px 0; font-size: 1.05em; line-height: 1.4; }
         #wrap-up-performance strong { color: var(--player-dark); }
         #wrap-up-reflection { text-align: left; margin-bottom: 25px; }
         #wrap-up-reflection h4 { font-family: 'Fredoka One', cursive; margin: 0 0 10px 0; color: var(--bot-dark); font-size: 1.3em; text-align: center; }
         #wrap-up-reflection p { font-size: 1.05em; line-height: 1.6; }
         #wrap-up-buttons { display: flex; flex-direction: column; gap: 15px; align-items: center; }
         #wrap-up-buttons button { width: 80%; font-size: 1.2em; padding: 15px; }
-        /* finish-game-btn style defined in general styles */
 
-        /* --- UPDATED MEDIA QUERY --- */
         @media (min-width: 950px) { 
-            /* This rule only affects the main game layout */
             #game-layout { flex-direction: row; align-items: flex-start; } 
-            
-            /* Algorithm popups (#algorithm-demo, #tsp-demo-layout) are NOT included here, 
-               so they will keep their default 'flex-direction: column' 
-               and stay stacked vertically in the center.
-            */
+        }
+        /* --- Cuter Bot Intro Popup Styles --- */
+        .bot-intro-panel-left {
+            flex-basis: 40%;
+            background: var(--bot-path); /* Using the Bot's blue */
+            padding: 50px 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            text-shadow: 1px 1px 3px rgba(0,0,0,0.2);
+        }
+        .bot-intro-panel-left .bot-intro-icon {
+            font-size: 6em;
+            line-height: 1;
+            margin-bottom: 20px;
+            animation: bot-bob 2s ease-in-out infinite; /* Fun animation! */
+        }
+        .bot-intro-panel-left .bot-intro-panel-title {
+            font-family: 'Fredoka One', cursive;
+            font-size: 2.2em;
+            margin: 0 0 10px 0;
+        }
+        .bot-intro-panel-left p {
+            font-size: 1.15em;
+            line-height: 1.5;
+        }
+
+        .bot-intro-panel-right {
+            flex-basis: 60%;
+            padding: 50px 60px;
+            background: var(--white);
+            display: flex; 
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        /* Fun bobbing animation for the robot */
+        @keyframes bot-bob {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0); }
+        }
+
+        /* Make it stack on small screens */
+        @media (max-width: 768px) {
+            #pre-bot-popup .popup-content {
+                flex-direction: column;
+                max-width: 500px;
+                padding: 0;
+            }
+            .bot-intro-panel-left {
+                padding: 40px 30px;
+            }
+            .bot-intro-panel-right {
+                padding: 40px 30px;
+                text-align: left; /* Keep text left-aligned */
+            }
+        }
+
+        /* --- NEW: Bot Legend Styles --- */
+        #bot-legend {
+            text-align: left;
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa; /* Matches results box */
+            border: 1px solid #e9ecef; /* Matches results box */
+            border-radius: 12px;
+        }
+        #bot-legend h4 {
+            font-family: 'Fredoka One', cursive;
+            margin: 0 0 10px 0;
+            color: var(--bot-dark);
+            text-align: center;
+            font-size: 1.1em; /* A nice size */
+        }
+        .color-key-list {
+            list-style: none;
+            padding-left: 0;
+            font-size: 0.95em;
+            margin: 0;
+        }
+        .color-key-list li {
+            display: flex;
+            align-items: center;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        .color-key-list li:last-child {
+            margin-bottom: 0;
+        }
+        .color-key-list .color-key {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+            border: 1px solid #777;
+            vertical-align: middle;
+            margin-right: 10px;
+            flex-shrink: 0; /* Prevent shrinking */
+        }
+        .color-key-list strong {
+            color: var(--text-dark); /* Use regular text color */
+            margin-right: 4px;
         }
     </style>
 </head>
@@ -289,28 +444,25 @@
         <div style="font-size: 5em; margin-bottom: 10px;">🍦</div>
         <h1 id="welcome-title">Welcome, Trainee!</h1>
          <button id="nav-how-to-play" class="tutorial-btn neutral-btn">Watch the Tutorial 💡</button>
-        <p style="font-size: 1.2em; line-height: 1.6;">Ready to deliver some delicious ice cream? Choose a level below!</p>
+        <p style="font-size: 1.2em; line-height: 1.6;">Ready to deliver some delicious ice cream?</p>
 
         <div class="nav-buttons">
             <div class="level-intro">
-                <h3>Level 1: Trainee Delivery🍦</h3>
+                <h3>Delivery Challenge 🍦</h3>
                  <ul>
-                    <li><strong>Your Mission:</strong> Deliver ice cream from 🚚 to 🏠 using the lowest cost route.</li>
-                    <li><strong>Moving:</strong> Click adjacent squares. Click your previous square to undo (costs time!).</li>
-                    <li><strong>Map:</strong> <ul> <li>⬜ White Roads = Fast (Cost: 1)</li> <li>🟫 Brown Roads = Slow (Cost: 3)</li> <li>🌳 Obstacles = Can't go through</li> </ul> </li>
-                    <li><strong>Goal:</strong> Lower cost = Bigger tip!</li>
+                     <li><strong>Your Mission:</strong> Deliver ice cream from 🚚 to 🏠 using the lowest *cost* path.</li>
+                     <li><strong>The Clock is Ticking:</strong> A timer will run during your turns. Try to get a low time *and* a low cost!</li>
+                     <li><strong>Map:</strong>
+                        <ul>
+                           <li>⬜ White Roads = Fast (Cost: 1)</li>
+                           <li>🟫 Brown Roads = Slow (Cost: 3)</li>
+                           <li>🌳 Obstacles = Can't go through</li>
+                        </ul>
+                     </li>
+                     <li><strong>Challenge:</strong> You'll play (Round 1), watch the A* Bot (Round 2), then try to beat its score (Round 3)!</li>
                  </ul>
             </div>
-            <button id="nav-start-trainee" class="player-btn">Start Level 1</button>
-
-            <div class="level-intro level-2" style="margin-top: 20px;">
-                <h3>Level 2: Expert Delivery🍦🍦</h3>
-                 <ul>
-                    <li><strong>Two Deliveries:</strong> Must deliver to <strong>both</strong> 🏠1 and 🏠2.</li>
-                    <li><strong>Order Matters:</strong> Find the best <strong>order</strong> (🚚 → 🏠1 → 🏠2 or 🚚 → 🏠2 → 🏠1). Lowest total cost wins!</li>
-                 </ul>
-            </div>
-            <button id="nav-start-expert" class="bot-btn">Start Level 2</button>
+            <button id="nav-start-trainee" class="player-btn">Start Game</button>
         </div>
     </div>
 </div>
@@ -319,7 +471,7 @@
 <div id="game-container" style="display: none;">
     <div id="app-container">
         <h1>Ice Cream Express</h1>
-         
+        
          <div id="game-header-buttons" style="display: flex; justify-content: center; gap: 15px; margin-bottom: 15px;">
              <button id="game-how-to-play-btn" class="tutorial-btn neutral-btn" style="margin: 0;">Watch the Tutorial 💡</button>
              <button id="game-check-rules-btn" class="tutorial-btn neutral-btn" style="margin: 0;">Check the Rules 📜</button>
@@ -330,21 +482,68 @@
             <div id="controls-info">
                 <div id="info-header"> <h2 id="round-title"></h2> </div>
                 <div class="stats-grid">
-                    <div id="cost-display">Cost: 0s</div>
+                    <div id="cost-display">Cost: 0</div>
+                    <div id="time-display"><span>⏱️</span> 0.0s</div>
                     <div id="tip-display">Tip: $10.00</div>
                     <div class="meter-container">
-                        <div class="meter-label"> <span>Tips & Meltdown</span> <div> <span id="money-icon">🤑</span> <span id="ice-cream-icon">🍦</span> </div> </div>
-                        <div class="bar"><div id="tip-meter-bar" class="bar-inner player-bar"></div></div>
+                        <div class="meter-label"> <span>Tip Meter</span> <div> <span id="money-icon">🤑</span> <span id="ice-cream-icon">🍦</span> </div> </div>
+                        <div class="bar"><div id="tip-meter-bar" class="bar-inner player-bar" style="width: 100%;"></div></div>
                     </div>
                 </div>
                 <div id="message-box"></div>
+                
+                <div id="results-comparison" style="display: none;"></div>
+                
+                <div id="bot-legend" style="display: none;">
+                    <h4>🤖 Bot's "Thinking" Colors</h4>
+                    <ul class="color-key-list">
+                        <li><span class="color-key" style="background:var(--current-node); border-color: var(--bot-dark);"></span> <strong>Dark Blue:</strong> "Checking NOW!"</li>
+                        <li><span class="color-key" style="background:var(--visited);"></span> <strong>Light Blue:</strong> "To-Check List"</li>
+                        <li><span class="color-key" style="background:var(--closed-set-node);"></span> <strong>Grey:</strong> "Already Checked"</li>
+                    </ul>
+                </div>
                 <div class="button-group">
                     <button id="finish-btn" class="player-btn"></button>
+                    <button id="rewatch-bot-btn" class="neutral-btn" style="display: none;"></button>
                     <button id="start-next-round-btn" class="player-btn" style="display: none;"></button>
                 </div>
-                <div id="results-comparison" style="display: none;"></div>
             </div>
         </div>
+    </div>
+</div>
+
+<div id="pre-bot-popup" class="popup-overlay" style="display: none;">
+    <div class="popup-content" style="max-width: 850px; padding: 0; overflow: hidden; display: flex; flex-direction: row;">
+    
+        <div class="bot-intro-panel-left">
+            <div class="bot-intro-icon">🤖</div>
+            <h3 class="bot-intro-panel-title">Bot's Turn!</h3>
+            <p>Get ready to watch the <strong>A* Search</strong> algorithm find the *perfect* path!</p>
+            <p style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">(This is how a real GPS thinks!)</p>
+        </div>
+
+        <div class="bot-intro-panel-right">
+            <h3 style="font-size: 1.8em; margin-top: 0; color: var(--bot-dark);">How the Bot "Thinks"</h3>
+            
+            <div class="popup-body-text" style="font-size: 1.05em; margin: 0 0 15px 0;">
+                <p>The bot is smart! It checks two things for every square:</p>
+                <ul style="margin-top: 10px; margin-bottom: 10px;">
+                    <li><strong>G-Cost:</strong> The *actual cost* from the start (past).</li>
+                    <li><strong>H-Cost:</strong> The *best guess* to the goal (future).</li>
+                </ul>
+                <p>It adds them to get an <strong>F-Score (G + H)</strong>, and always explores the square with the *lowest* F-Score first.</p>
+                
+                <p style="margin-top: 20px; font-weight: 600;">Watch for these colors:</p>
+                <ul style="list-style: none; padding-left: 0; font-size: 0.95em; margin-top: 10px;">
+                    <li><span class="color-key" style="background:var(--current-node); border-color: var(--bot-dark);"></span> <strong>Dark Blue:</strong> "Checking NOW!"</li>
+                    <li><span class="color-key" style="background:var(--visited);"></span> <strong>Light Blue:</strong> "To-Check List"</li>
+                    <li><span class="color-key" style="background:var(--closed-set-node);"></span> <strong>Grey:</strong> "Already Checked"</li>
+                </ul>
+            </div>
+
+            <button id="start-bot-turn-btn" class="bot-btn" style="margin-top: 20px; width: 100%; font-size: 1.2em;">Watch the Bot!</button>
+        </div>
+
     </div>
 </div>
 
@@ -353,9 +552,26 @@
         <button class="close-x-btn" id="close-x-btn">&times;</button>
         <h3 id="popup-title"></h3>
         <div id="popup-body"></div>
-        <div id="algorithm-explanation-container" style="display: none;"> <div class="algorithm-explanation"> <h4>Watch the Bot Think! (A* Search)</h4> <div id="algorithm-demo"> <div id="mini-game-board"></div> <div id="demo-controls"> <div id="explanation-text">Click "Next Step" to see how the bot thinks!</div> <button id="prev-step-btn" class="bot-btn" disabled>Previous Step</button> <button id="next-step-btn" class="bot-btn">Next Step!</button> </div> </div> </div> </div>
-        <div id="tsp-explanation-container" style="display: none;"> <div class="algorithm-explanation"> <h4>How the Bot Solves TSP</h4> <div id="tsp-demo-layout"> <div id="tsp-boards"> <div id="tsp-route-a-container" class="tsp-route-container"> <h5>Route A: 🤖 → 🏠1 → 🏠2</h5> <div id="tsp-mini-board-a" class="tsp-mini-board"></div> <div id="tsp-cost-a">Cost: ?</div> </div> <div id="tsp-route-b-container" class="tsp-route-container"> <h5>Route B: 🤖 → 🏠2 → 🏠1</h5> <div id="tsp-mini-board-b" class="tsp-mini-board"></div> <div id="tsp-cost-b">Cost: ?</div> </div> </div> <div id="tsp-controls"> <button id="calc-route-a-btn" class="bot-btn">Calculate Route A</button> <button id="calc-route-b-btn" class="bot-btn" disabled>Calculate Route B</button> <button id="compare-tsp-btn" class="bot-btn" disabled>Compare!</button> </div> </div> <div id="tsp-explanation-text">The bot checks both possible routes. Click to see the cost for Route A.</div> </div> </div>
-        <button id="close-popup-btn" class="player-btn" style="margin-top: 20px;"></button>
+        
+        <div id="algorithm-explanation-container" style="display: none;">
+             <div class="algorithm-explanation">
+                <h4>Watch the Bot Think! (A* Search)</h4>
+                <div id="algorithm-demo">
+                    <div id="mini-game-board"></div>
+                    <div id="demo-controls">
+                        <div id="explanation-text">Click "Next Step" to see how the bot thinks!</div>
+                        <button id="prev-step-btn" class="bot-btn" disabled>Previous Step</button>
+                        <button id="next-step-btn" class="bot-btn">Next Step!</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="popup-button-group">
+            <button id="replay-mini-demo-btn" class="neutral-btn" style="display: none;">Replay Mini-Demo</button>
+            <button id="popup-got-it-btn" class="player-btn">Got It!</button>
+        </div>
+        
     </div>
 </div>
 
@@ -374,7 +590,7 @@
          <div id="wrap-up-performance"></div>
          <div id="wrap-up-reflection">
              <h4>Learning Reflection 🤔</h4>
-             <p>Think about the paths you chose. Were they always the shortest? How did slow roads change your strategy? The bot uses Shortest Path Algorithms like A*(Level 1) and TSP(Level 2) solving to find the best path, just like real delivery companies!</p>
+             <p>Think about the paths you chose. Were they always the lowest cost? Were they the fastest (lowest time)? Sometimes the lowest cost path (using slow roads) takes more time to click! The bot uses <strong>A* Search</strong> to find the best path, just like real delivery companies use to plan routes!</p>
          </div>
          <div id="wrap-up-buttons"></div>
      </div>
@@ -393,50 +609,77 @@ document.addEventListener('DOMContentLoaded', () => {
     const userInfoForm = document.getElementById('user-info-form');
     const welcomeTitle = document.getElementById('welcome-title');
     const navStartTraineeBtn = document.getElementById('nav-start-trainee');
-    const navStartExpertBtn = document.getElementById('nav-start-expert');
     const navHowToPlayBtn = document.getElementById('nav-how-to-play'); 
     const gameHowToPlayBtn = document.getElementById('game-how-to-play-btn'); 
     const boardEl = document.getElementById('game-board'), messageBox = document.getElementById('message-box');
-    const costDisplay = document.getElementById('cost-display'), tipDisplay = document.getElementById('tip-display');
+    const costDisplay = document.getElementById('cost-display');
+    const tipDisplay = document.getElementById('tip-display');
+    const timeDisplay = document.getElementById('time-display');
     const roundTitleEl = document.getElementById('round-title'); 
     const tipMeterBar = document.getElementById('tip-meter-bar');
-    const finishBtn = document.getElementById('finish-btn'), startNextRoundBtn = document.getElementById('start-next-round-btn');
+    const finishBtn = document.getElementById('finish-btn');
+    const startNextRoundBtn = document.getElementById('start-next-round-btn');
+    const rewatchBotBtn = document.getElementById('rewatch-bot-btn'); // NEW
     const moneyIcon = document.getElementById('money-icon'), iceCreamIcon = document.getElementById('ice-cream-icon');
     const resultsComparisonEl = document.getElementById('results-comparison');
-    const popupOverlay = document.getElementById('popup-overlay'), popupTitle = document.getElementById('popup-title');
-    const popupBody = document.getElementById('popup-body'), closePopupBtn = document.getElementById('close-popup-btn');
-    const closeXBtn = document.getElementById('close-x-btn');
-    const algoExplanationContainer = document.getElementById('algorithm-explanation-container');
-    const miniGameBoard = document.getElementById('mini-game-board'), explanationText = document.getElementById('explanation-text');
-    const prevStepBtn = document.getElementById('prev-step-btn'), nextStepBtn = document.getElementById('next-step-btn');
-    const tspExplanationContainer = document.getElementById('tsp-explanation-container');
-    const tspMiniBoardA = document.getElementById('tsp-mini-board-a'), tspMiniBoardB = document.getElementById('tsp-mini-board-b');
-    const tspCostA = document.getElementById('tsp-cost-a'), tspCostB = document.getElementById('tsp-cost-b');
-    const calcRouteABtn = document.getElementById('calc-route-a-btn'), calcRouteBBtn = document.getElementById('calc-route-b-btn');
-    const compareTspBtn = document.getElementById('compare-tsp-btn'), tspExplanationText = document.getElementById('tsp-explanation-text');
-    const tspRouteAContainer = document.getElementById('tsp-route-a-container'), tspRouteBContainer = document.getElementById('tsp-route-b-container');
-    const wrapUpTitle = document.getElementById('wrap-up-title');
-    const wrapUpPerformance = document.getElementById('wrap-up-performance');
-    const wrapUpButtons = document.getElementById('wrap-up-buttons');
-
-    // New Rules Popup Selectors
-    const gameCheckRulesBtn = document.getElementById('game-check-rules-btn');
+    
+    // Popups
     const rulesPopupOverlay = document.getElementById('rules-popup-overlay');
     const rulesPopupTitle = document.getElementById('rules-popup-title');
     const rulesPopupBody = document.getElementById('rules-popup-body');
     const rulesCloseXBtn = document.getElementById('rules-close-x-btn');
     const rulesClosePopupBtn = document.getElementById('rules-close-popup-btn');
+    const gameCheckRulesBtn = document.getElementById('game-check-rules-btn');
+
+    // Pre-Bot Popup
+    const preBotPopup = document.getElementById('pre-bot-popup');
+    const startBotTurnBtn = document.getElementById('start-bot-turn-btn');
+
+    // Main A* Teaching Popup
+    const popupOverlay = document.getElementById('popup-overlay');
+    const popupTitle = document.getElementById('popup-title');
+    const popupBody = document.getElementById('popup-body');
+    const closeXBtn = document.getElementById('close-x-btn');
+    const algoExplanationContainer = document.getElementById('algorithm-explanation-container');
+    const popupGotItBtn = document.getElementById('popup-got-it-btn'); // Renamed
+    
+    // Mini-demo
+    const miniGameBoard = document.getElementById('mini-game-board');
+    const explanationText = document.getElementById('explanation-text');
+    const prevStepBtn = document.getElementById('prev-step-btn');
+    const nextStepBtn = document.getElementById('next-step-btn');
+    const replayMiniDemoBtn = document.getElementById('replay-mini-demo-btn'); // Renamed
+    
+    // Wrap-up
+    const wrapUpTitle = document.getElementById('wrap-up-title');
+    const wrapUpPerformance = document.getElementById('wrap-up-performance');
+    const wrapUpButtons = document.getElementById('wrap-up-buttons');
+
 
     // --- GAME CONSTANTS & STATE ---
-    const GRID_SIZE = 10, OBSTACLE_COUNT = 18, SLOW_ROAD_COUNT = 25;
-    const FAST_ROAD_COST = 1, SLOW_ROAD_COST = 3, MAX_COST = 40; 
-    let grid = [], startNode, endNode, endNode2;
-    let playerPath = [], housesVisited = {h1: false, h2: false};
+    const GRID_SIZE = 10, OBSTACLE_COUNT = 18;
+    const FAST_ROAD_COST = 1; // Restored
+    const SLOW_ROAD_COST = 3; // Restored
+    const SLOW_ROAD_COUNT = 25; // Restored
+    const MAX_TIP = 10.00;
+    const MAX_COST_PENALTY = 40; // The cost at which the tip becomes $0
+    
+    let grid = [], startNode, endNode;
+    let playerPath = [];
     let playerVisited = new Set();
-    let playerCost = 0, botPathCost = 0, travelingBotCost = 0, currentRound = 1, currentDemoStep = 0;
+    let playerCost = 0, botPathCost = 0, currentRound = 1;
+    let botAStarLiveSteps = []; // For the main board demo
+    
+    let playerCostRound1 = 0, playerCostRound3 = 0;
+    
+    let roundTimerInterval = null;
+    let roundStartTime = 0;
+    let playerTimeRound1 = 0, playerTimeRound3 = 0;
+    let botTime = 0; // For bot's animation
+
+    // RESTORED: Mini-demo state
     let demoGrid, demoPath = [];
-    // Keep score variables tied to original round numbers for internal logic
-    let playerCostRound1 = 0, playerCostRound3 = 0, playerCostRound4 = 0, playerCostRound6 = 0;
+    let currentDemoStep = 0;
 
     // --- USER & PAGE MANAGEMENT ---
     let currentUser = null;
@@ -462,7 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
         localStorage.setItem('iceCreamExpressUser', JSON.stringify(userInfo)); 
         currentUser = userInfo; 
-        if (window.saveUserProfileToFirebase) { // Changed function name for clarity
+        if (window.saveUserProfileToFirebase) { 
             window.saveUserProfileToFirebase(userInfo); 
         } else { 
             console.warn("Firebase user profile save function not found."); 
@@ -472,19 +715,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     navStartTraineeBtn.addEventListener('click', () => { showPage('game-container'); setupGame(); });
-    navStartExpertBtn.addEventListener('click', () => { showPage('game-container'); setupExpertChallenge(); });
 
-    // --- Tutorial Popup Logic ---
     function openHowToPlayPopup() {
-        if (navigationPage.style.display === 'flex') {
-            carouselItems = navigationTutorialItems; 
-        } else {
-            if (currentRound >= 4) { 
-                carouselItems = level2TutorialItems; 
-            } else { 
-                carouselItems = level1TutorialItems; 
-            }
-        }
+        carouselItems = level1TutorialItems; // Only one tutorial
         introPopupOverlay.style.display = 'flex'; 
         carouselRender(0); 
     }
@@ -504,9 +737,6 @@ document.addEventListener('DOMContentLoaded', () => {
                    welcomeTitle.textContent = `Welcome, Delivery Driver!`; 
                }
         }
-        const level1Complete = localStorage.getItem('iceCreamExpressLevel1Complete') === 'true';
-        navStartExpertBtn.disabled = !level1Complete;
-        navStartExpertBtn.textContent = level1Complete ? 'Start Level 2' : 'Level 2 (Locked 🔒)';
     }
 
     function initializeAppFlow() {
@@ -533,16 +763,6 @@ document.addEventListener('DOMContentLoaded', () => {
         {type: 'video', src: "2_page_before1st_round.mp4", alt: 'Intro Video 2'},
         {type: 'image', src: "3_page_before1st_round.png", alt: 'Intro Image 3'}
     ];
-    const navigationTutorialItems = [
-        {type: 'video', src: "1_page_before1st_round.mp4", alt: 'Intro Video 1'},
-        {type: 'video', src: "2_page_before1st_round.mp4", alt: 'Intro Video 2'},
-        {type: 'image', src: "3_page_before1st_round.png", alt: 'Intro Image 3'},
-        {type: 'video', src: "1_page_before4th_round.mp4", alt: 'Level 2 Intro'} 
-    ];
-    const level2TutorialItems = [
-        {type: 'video', src: "1_page_before4th_round.mp4", alt: 'Level 2 Intro'} 
-    ];
-
     let carouselItems = level1TutorialItems; 
     const carouselContainer = document.getElementById('media-container');
     const carouselStatus = document.getElementById('intro-status');
@@ -556,55 +776,28 @@ document.addEventListener('DOMContentLoaded', () => {
     carouselCloseBtn.addEventListener('click', () => { introPopupOverlay.style.display = 'none'; const video = carouselContainer.querySelector('video'); if (video) { video.pause(); video.currentTime = 0; } });
     window.addEventListener('keydown', (e) => { if (introPopupOverlay.style.display !== 'flex') return; if(e.key === 'ArrowLeft') carouselPrevBtn.click(); if(e.key === 'ArrowRight') carouselNextBtn.click(); });
     let startX = 0; let isTouch = false; const stage = document.querySelector('#intro-popup-overlay .stage'); if (stage) { stage.addEventListener('touchstart', (e) => { if (introPopupOverlay.style.display !== 'flex') return; isTouch = true; startX = e.touches[0].clientX; }); stage.addEventListener('touchmove', (e) => { if(!isTouch || introPopupOverlay.style.display !== 'flex') return; const dx = e.touches[0].clientX - startX; if(Math.abs(dx) > 60){ if(dx < 0) carouselNextBtn.click(); else carouselPrevBtn.click(); isTouch = false; } }); stage.addEventListener('touchend', () => { isTouch = false; }); }
-    // carouselRender(0); // Don't render initially, render on open
     // --- END INTRO SCRIPT ---
 
     // --- New Rules Popup Logic ---
     function openGameRulesPopup() {
-        let title = '';
-        let rulesHtml = '';
-        const isExpert = currentRound >= 4;
-        
-        if (isExpert) {
-            title = 'Level 2 Rules: Expert Delivery';
-            rulesHtml = `
-                <div class="popup-body-text">
-                    <p>Your mission is to deliver ice cream to <strong>both</strong> houses!</p>
-                    <ul>
-                        <li><strong>Two Deliveries:</strong> You must visit 🏠1 and 🏠2.</li>
-                        <li><strong>Order Matters:</strong> The total cost depends on the order you visit them (e.g., 🚚 → 🏠1 → 🏠2 vs. 🚚 → 🏠2 → 🏠1).</li>
-                        <li><strong>Goal:</strong> Find the route with the <strong>lowest total cost</strong> to get the biggest tip.</li>
-                        <li><strong>Map:</strong>
-                            <ul>
-                                <li>⬜ White Roads = Fast (Cost: 1)</li>
-                                <li>🟫 Brown Roads = Slow (Cost: 3)</li>
-                                <li>🌳 Obstacles = Can't go through</li>
-                            </ul>
-                        </li>
-                        <li><strong>Moving:</strong> Click adjacent squares to move. Click your previous square to undo (this adds to your cost!).</li>
-                    </ul>
-                </div>
-            `;
-        } else {
-            title = 'Level 1 Rules: Trainee Delivery';
-            rulesHtml = `
-                <div class="popup-body-text">
-                    <p>Your mission is to deliver ice cream from the truck 🚚 to the house 🏠.</p>
-                    <ul>
-                        <li><strong>One Delivery:</strong> Find the best path from 🚚 to 🏠.</li>
-                        <li><strong>Goal:</strong> Reach the house with the <strong>lowest cost</strong> to get the biggest tip.</li>
-                        <li><strong>Map:</strong>
-                            <ul>
-                                <li>⬜ White Roads = Fast (Cost: 1)</li>
-                                <li>🟫 Brown Roads = Slow (Cost: 3)</li>
-                                <li>🌳 Obstacles = Can't go through</li>
-                            </ul>
-                        </li>
-                        <li><strong>Moving:</strong> Click adjacent squares to move. Click your previous square to undo (this adds to your cost!).</li>
-                    </ul>
-                </div>
-            `;
-        }
+        let title = 'Game Rules: Delivery Challenge';
+        let rulesHtml = `
+            <div class="popup-body-text">
+                <p>Your mission is to deliver ice cream from the truck 🚚 to the house 🏠.</p>
+                <ul>
+                    <li><strong>Two Goals:</strong> Get the <strong>lowest cost</strong> *and* the <strong>fastest time</strong>!</li>
+                    <li><strong>Timer:</strong> The clock starts ticking as soon as you make your first move!</li>
+                    <li><strong>Map:</strong>
+                        <ul>
+                           <li>⬜ White Roads = Fast (Cost: 1)</li>
+                           <li>🟫 Brown Roads = Slow (Cost: 3)</li>
+                           <li>🌳 Obstacles = Can't go through</li>
+                        </ul>
+                    </li>
+                    <li><strong>Moving:</strong> Click adjacent squares to move. Click your previous square to undo (this adds to your cost and time!).</li>
+                </ul>
+            </div>
+        `;
         
         rulesPopupTitle.innerHTML = title;
         rulesPopupBody.innerHTML = rulesHtml;
@@ -616,48 +809,86 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     // --- End Rules Popup Logic ---
 
-    // --- NEW: Helper function for Round Labels ---
     function getRoundLabelInfo(roundNumber) {
         switch (roundNumber) {
-            case 1: return { level: 1, description: "Your 1st Try", title: "Level 1: Your 1st Try!", scoreLabel: "L1 - Your 1st Try Cost" };
-            case 2: return { level: 1, description: "Bot's Play", title: "Level 1: Bot's Play", scoreLabel: "L1 - Bot's Play Cost" };
-            case 3: return { level: 1, description: "Your 2nd Try", title: "Level 1: Your 2nd Try", scoreLabel: "L1 - Your 2nd Try Cost" };
-            case 4: return { level: 2, description: "Your 1st Try", title: "Level 2: Your 1st Try!", scoreLabel: "L2 - Your 1st Try Cost" };
-            case 5: return { level: 2, description: "Bot's Play", title: "Level 2: Bot's Play", scoreLabel: "L2 - Bot's Play Cost" };
-            case 6: return { level: 2, description: "Your 2nd Try", title: "Level 2: Your 2nd Try", scoreLabel: "L2 - Your 2nd Try Cost" };
-            default: return { level: 0, description: "Unknown Round", title: "Unknown Round", scoreLabel: "Unknown Cost" };
+            /* --- MODIFIED: Replaced "Round 1/2/3" with clearer labels --- */
+            case 1: return { 
+                level: 1, 
+                description: "Your 1st Play", 
+                title: "Your 1st Play! 🚚", 
+                scoreLabel: "L1 - Your 1st Play Cost" 
+            };
+            case 2: return { 
+                level: 1, 
+                description: "Bot's Play (A*)", 
+                title: "Bot's Play! 🤖 (A* Search)", 
+                scoreLabel: "L1 - Bot's Play Cost" 
+            };
+            case 3: return { 
+                level: 1, 
+                description: "Your 2nd Play", 
+                title: "Your 2nd Play! 🍦", 
+                scoreLabel: "L1 - Your 2nd Play Cost" 
+            };
+            /* --- End of Modification --- */
+            default: return { 
+                level: 0, 
+                description: "Unknown Round", 
+                title: "Unknown Round", 
+                scoreLabel: "Unknown Cost" 
+            };
         }
     }
-
+    function updateRoundTimer() {
+        const elapsedSeconds = (Date.now() - roundStartTime) / 1000;
+        timeDisplay.innerHTML = `<span>⏱️</span> ${elapsedSeconds.toFixed(1)}s`;
+    }
 
     // --- MAIN GAME FLOW ---
-    function setupGame() { resetGameState(); currentRound = 1; createGrid(1); startPlayerTurn(); } 
-    function setupExpertChallenge() { resetGameState(); currentRound = 4; createGrid(2); startPlayerTurn(); } 
+    function setupGame() { 
+        resetGameState(); 
+        currentRound = 1; 
+        createGrid();
+        startPlayerTurn(); 
+    } 
     function resetGameState() { 
         playerPath = []; 
         playerCost = 0; 
-        playerCostRound1 = 0; // Keep internal score vars
+        playerCostRound1 = 0; 
         botPathCost = 0; 
         playerCostRound3 = 0; 
-        travelingBotCost = 0;
-        playerCostRound4 = 0; 
-        playerCostRound6 = 0; 
-        housesVisited = {h1: false, h2: false}; 
+        botAStarLiveSteps = [];
+        
+        if (roundTimerInterval) clearInterval(roundTimerInterval);
+        roundTimerInterval = null;
+        roundStartTime = 0;
+        playerTimeRound1 = 0;
+        playerTimeRound3 = 0;
+        botTime = 0;
+        
         finishBtn.style.display = 'inline-block'; 
         startNextRoundBtn.style.display = 'none'; 
+        rewatchBotBtn.style.display = 'none'; // Hide new button
         finishBtn.disabled = true; 
         hideResultsComparison(); 
+        document.getElementById('bot-legend').style.display = 'none'; // Hide legend
     }
     
-    // --- UPDATED: startPlayerTurn with new labels ---
-    function startPlayerTurn() { 
+function startPlayerTurn() { 
         clearVisualization(); 
+
+        // ADDED: Reset timer state and display for the new round
+        if (roundTimerInterval) clearInterval(roundTimerInterval);
+        roundTimerInterval = null;
+        roundStartTime = 0;
+        timeDisplay.innerHTML = '<span>⏱️</span> 0.0s';
+
+        document.getElementById('bot-legend').style.display = 'none'; // Hide legend
         if (!startNode) { console.error("Start node not set in startPlayerTurn"); return; } 
         playerPath = [{ ...startNode, costSoFar: 0 }]; 
         playerVisited.clear(); 
         playerVisited.add(`${startNode.row}-${startNode.col}`); 
         playerCost = 0; 
-        housesVisited = {h1: false, h2: false}; 
         updatePlayerUI(); 
         boardEl.addEventListener('click', handlePlayerMove); 
         finishBtn.disabled = true; 
@@ -665,284 +896,312 @@ document.addEventListener('DOMContentLoaded', () => {
         const roundInfo = getRoundLabelInfo(currentRound);
         roundTitleEl.textContent = roundInfo.title;
 
+
         switch (currentRound) { 
             case 1: 
                 messageBox.textContent = "Click a road next to your truck to start!"; 
                 finishBtn.textContent = 'Finish Delivery'; 
                 break; 
             case 3: 
-                messageBox.textContent = `The bot's cost was ${botPathCost}s. Can you beat it?`; 
-                finishBtn.textContent = 'Finish 2nd Try'; 
-                break; 
-            case 4: 
-                messageBox.textContent = `Find the fastest path to visit BOTH houses in any order.`; 
-                finishBtn.textContent = 'Finish Route'; 
-                break; 
-            case 6: 
-                messageBox.textContent = `The bot's best route cost ${travelingBotCost}s. Find the fastest path!`; 
+                messageBox.textContent = `The bot's best path cost ${botPathCost}. Can you beat it?`; 
                 finishBtn.textContent = 'Finish 2nd Try'; 
                 break; 
         } 
         if(grid[startNode.row]?.[startNode.col]?.element) { grid[startNode.row][startNode.col].element.textContent = '🚚'; }
     }
     
-    // --- UPDATED: startBotTurn & startTravelingBotTurn with new labels ---
+    // NEW: Function to show pre-bot popup
+    function showAStarIntroPopup() {
+        preBotPopup.style.display = 'flex';
+    }
+    startBotTurnBtn.addEventListener('click', () => {
+        preBotPopup.style.display = 'none';
+        startBotTurn(); // Now start the actual bot turn
+    });
+
+    // NEW: Bot turn
     function startBotTurn() { 
-        currentRound = 2; // Move to Bot's turn for Level 1
+        currentRound = 2; // Bot's turn
         boardEl.removeEventListener('click', handlePlayerMove); 
         const roundInfo = getRoundLabelInfo(currentRound);
         roundTitleEl.textContent = roundInfo.title; 
-        messageBox.textContent = "The bot is calculating the best route..."; 
+        
+        // Phase 1: "Thinking" (Live Demo)
+        messageBox.textContent = "Bot is thinking... Watch the A* Search!"; 
+        if (roundTimerInterval) clearInterval(roundTimerInterval);
+        timeDisplay.innerHTML = '<span>⏱️</span> Thinking...';
+        
         clearPlayerPath(); 
         if(grid[startNode.row]?.[startNode.col]?.element) grid[startNode.row][startNode.col].element.textContent = '🤖'; 
-        findShortestPathAStar(grid, startNode, endNode, (path) => { 
-            botPathCost = path.length > 0 ? path[path.length - 1].g : 0; 
-            animateBotPath(path, `The bot found a route in ${botPathCost}s! Watch how...`, () => { 
-                showResultsComparison(2); // Show comparison after round 2
-                updateAndShowPopup(currentRound); 
-            }); 
-        }); 
-    }
-
-    function startTravelingBotTurn() { 
-        currentRound = 5; // Move to Bot's turn for Level 2
-        boardEl.removeEventListener('click', handlePlayerMove); 
-        const roundInfo = getRoundLabelInfo(currentRound);
-        roundTitleEl.textContent = roundInfo.title; 
-        messageBox.textContent = "The bot is calculating BOTH possible routes..."; 
-        clearVisualization(); 
-        if(grid[startNode.row]?.[startNode.col]?.element) grid[startNode.row][startNode.col].element.textContent = '🤖'; 
         
-        // --- TSP Calculation Logic (unchanged internally) ---
-        const findPathAsync = (start, end) => new Promise(resolve => { let tempGrid = JSON.parse(JSON.stringify(grid.map(row => row.map(({element, ...rest}) => rest)))); findShortestPathAStar(tempGrid, start, end, path => resolve({ path, cost: path.length > 0 ? path[path.length - 1].g : Infinity })); }); 
-        let route1 = {}, route2 = {}; 
-        findPathAsync(startNode, endNode).then(path_S1 => { route1.path_S1 = path_S1; return findPathAsync(endNode, endNode2); }).then(path_12 => { route1.path_12 = path_12; const route1Cost = route1.path_S1.cost + route1.path_12.cost; const route1Path = route1.path_S1.path.concat(route1.path_12.path.slice(1)); findPathAsync(startNode, endNode2).then(path_S2 => { route2.path_S2 = path_S2; return findPathAsync(endNode2, endNode); }).then(path_21 => { route2.path_21 = path_21; const route2Cost = route2.path_S2.cost + route2.path_21.cost; const route2Path = route2.path_S2.path.concat(route2.path_21.path.slice(1)); let bestPath, message; if (route1Cost <= route2Cost) { travelingBotCost = route1Cost; bestPath = route1Path; message = `Bot chose H1 first! Optimal route cost: ${travelingBotCost}s.`; } else { travelingBotCost = route2Cost; bestPath = route2Path; message = `Bot chose H2 first! Optimal route cost: ${travelingBotCost}s.`; } 
-            animateBotPath(bestPath, message, () => { 
-                showResultsComparison(5); // Show comparison after round 5
-                updateAndShowPopup(currentRound); 
-            }); 
-        }); }); 
-        // --- End TSP Calculation Logic ---
+        document.getElementById('bot-legend').style.display = 'block'; // MODIFIED: Show legend (TASK 2)
+
+        // Get the path and the *steps for the live demo*
+        findShortestPathAStar(grid, startNode, endNode, (path, steps) => { 
+            botPathCost = path.length > 0 ? path[path.length - 1].g : 0; 
+            botAStarLiveSteps = steps;
+            
+            // Play the slow demo on the main board
+            animateAStarSearch(botAStarLiveSteps, () => {
+                // When demo is done, clear viz and start Phase 2
+                clearAStarVizClasses(false); // Keep bot path
+                document.getElementById('bot-legend').style.display = 'none'; // MODIFIED: Hide legend (TASK 2)
+                
+                // Phase 2: "Executing" (Timed Run)
+                messageBox.textContent = `Bot found a path! Cost: ${botPathCost}. Executing...`;
+                const botTurnStartTime = Date.now();
+                timeDisplay.innerHTML = '<span>⏱️</span> 0.0s';
+                roundTimerInterval = setInterval(() => {
+                    const elapsedSeconds = (Date.now() - botTurnStartTime) / 1000;
+                    timeDisplay.innerHTML = `<span>⏱️</span> ${elapsedSeconds.toFixed(1)}s`;
+                }, 100);
+
+                animateBotPath(path, `Bot's final path cost: ${botPathCost}!`, () => { 
+                    // When animation is done, stop timer
+                    if (roundTimerInterval) clearInterval(roundTimerInterval);
+                    botTime = (Date.now() - botTurnStartTime) / 1000;
+                    timeDisplay.innerHTML = `<span>⏱️</span> ${botTime.toFixed(1)}s`;
+                    
+                    // Show results
+                    showResultsComparison(2);
+                    finishBtn.style.display = 'none';
+                    // The button-showing lines have been removed from here
+
+                    // ADDED: Delay before showing the popup
+                    const popupDelay = 2500; // 2.5-second delay
+                    setTimeout(() => {
+                        updateAndShowPopup(2); // This opens the teaching popup
+                    }, popupDelay);
+                });});
+        }, true); 
     }
     
-    // --- EVENT LISTENERS ---
+    // --- EVENT LISTENERS (NEW FLOW) ---
     finishBtn.addEventListener('click', () => {
         boardEl.removeEventListener('click', handlePlayerMove);
         finishBtn.disabled = true;
         finishBtn.style.display = 'none'; 
 
-        // Store player cost based on the current round *before* potentially starting the next
-        if (currentRound === 1) playerCostRound1 = playerCost;
-        else if (currentRound === 3) playerCostRound3 = playerCost;
-        else if (currentRound === 4) playerCostRound4 = playerCost;
-        else if (currentRound === 6) playerCostRound6 = playerCost;
+        if (roundTimerInterval) clearInterval(roundTimerInterval);
+        const elapsedSeconds = (Date.now() - roundStartTime) / 1000;
+        timeDisplay.innerHTML = `<span>⏱️</span> ${elapsedSeconds.toFixed(1)}s`;
 
-        switch (currentRound) {
-            case 1: startBotTurn(); break; 
-            case 3: 
-                localStorage.setItem('iceCreamExpressLevel1Complete', 'true'); 
-                showWrapUpPopup('trainee'); // This will now save L1 results
-                break; 
-            case 4: startTravelingBotTurn(); break; 
-            case 6: 
-                showWrapUpPopup('expert'); // This will now save L2 results
-                break; 
+        if (currentRound === 1) {
+            playerCostRound1 = playerCost;
+            playerTimeRound1 = elapsedSeconds;
+            // Show R1 results in-page and wait
+            showResultsComparison(1);
+            startNextRoundBtn.textContent = "Start Bot's Turn 🤖"; // Changed text
+            startNextRoundBtn.style.display = 'inline-block';
+            rewatchBotBtn.style.display = 'none';
+            
+        } else if (currentRound === 3) {
+            playerCostRound3 = playerCost;
+            playerTimeRound3 = elapsedSeconds;
+            // Show R1, R2, R3 results in-page and wait
+            showResultsComparison(3);
+            startNextRoundBtn.textContent = "See Final Results! 🏆";
+            startNextRoundBtn.style.display = 'inline-block';
+            rewatchBotBtn.style.display = 'none';
         }
     });
     
-    // --- UPDATED: startNextRoundBtn with new labels ---
+    // Main "Next" button logic
     startNextRoundBtn.addEventListener('click', () => {
         hideResultsComparison();
         startNextRoundBtn.style.display = 'none'; 
+        rewatchBotBtn.style.display = 'none';
         finishBtn.style.display = 'inline-block'; 
-        // currentRound is already updated in closePopup before this is clicked
-        startPlayerTurn(); 
+
+        if (currentRound === 1) {
+            // We're done with R1, now show the PRE-BOT POPUP
+            showAStarIntroPopup();
+        } else if (currentRound === 2) {
+            // This is clicked after closing the popup
+            currentRound = 3;
+            startPlayerTurn();
+        } else if (currentRound === 3) {
+            // We're done with R3, show final wrap-up
+            showWrapUpPopup('trainee');
+        }
     });
 
-    // Rules Popup Listeners
+    // NEW: Rewatch bot button listener
+    rewatchBotBtn.addEventListener('click', () => {
+        hideResultsComparison();
+        document.getElementById('bot-legend').style.display = 'none'; // MODIFIED: Hide legend (TASK 2)
+        rewatchBotBtn.style.display = 'none';
+        startNextRoundBtn.style.display = 'none';
+        startBotTurn(); // Just re-run the bot's turn
+    });
+
+
     gameCheckRulesBtn.addEventListener('click', openGameRulesPopup);
     rulesCloseXBtn.addEventListener('click', closeRulesPopup);
     rulesClosePopupBtn.addEventListener('click', closeRulesPopup);
 
-
-    // --- UPDATED: showWrapUpPopup with new labels and data saving ---
+    // --- WRAP-UP POPUP ---
     function showWrapUpPopup(level) {
         wrapUpPerformance.innerHTML = ''; 
         wrapUpButtons.innerHTML = ''; 
 
-        let firstPlayerCost = 0;
-        let finalPlayerCost = 0;
-        let finalBotCost = 0;
-        let isExpert = level === 'expert';
-        let resultMessage = ''; 
-        let scoreDataToSave = {}; // Object to hold scores for Firebase
-
         const round1Info = getRoundLabelInfo(1);
         const round2Info = getRoundLabelInfo(2);
         const round3Info = getRoundLabelInfo(3);
-        const round4Info = getRoundLabelInfo(4);
-        const round5Info = getRoundLabelInfo(5);
-        const round6Info = getRoundLabelInfo(6);
+        
+        wrapUpTitle.textContent = 'Challenge Complete! 🍦';
+        
+        const bestPlayerCost = Math.min(playerCostRound1, playerCostRound3);
+        const beatBotBest = bestPlayerCost <= botPathCost; 
 
-        if (level === 'trainee') {
-            wrapUpTitle.textContent = 'Level 1 Complete! 🍦';
-            firstPlayerCost = playerCostRound1; 
-            finalPlayerCost = playerCostRound3; 
-            finalBotCost = botPathCost;         
-
-            const improvedScore = finalPlayerCost < firstPlayerCost;
-            const bestPlayerScore = Math.min(firstPlayerCost, finalPlayerCost);
-            const beatBotBest = bestPlayerScore <= finalBotCost; 
-
-            if (beatBotBest) {
-                resultMessage = `🎉 Awesome! Your best score (${bestPlayerScore}s) beat (or tied) the bot's ${finalBotCost}s!`;
-                if (improvedScore) resultMessage += ` Plus, you improved your own score!`;
-            } else if (improvedScore) {
-                resultMessage = `👍 Great job improving your score from ${firstPlayerCost}s to ${finalPlayerCost}s! Keep practicing to beat the bot!`;
-            } else {
-                 resultMessage = `😥 The bot was faster this time (${finalBotCost}s vs your best of ${bestPlayerScore}s). Try again!`;
-            }
-
-            // Prepare L1 score data
-            scoreDataToSave = {
-                level: 1,
-                scores: {
-                    [round1Info.scoreLabel]: firstPlayerCost,
-                    [round2Info.scoreLabel]: finalBotCost,
-                    [round3Info.scoreLabel]: finalPlayerCost
-                }
-            };
-
-            wrapUpPerformance.innerHTML = `
-                <h4>Level 1 Performance</h4>
-                <p><strong>${round1Info.description} Cost:</strong> ${firstPlayerCost}s</p>
-                <p><strong>${round2Info.description} Cost:</strong> ${finalBotCost}s</p>
-                <p><strong>${round3Info.description} Cost:</strong> ${finalPlayerCost}s</p>
-                <p style="margin-top: 10px; font-weight: 600;">${resultMessage}</p> 
-            `;
-
-        } else { // expert
-            wrapUpTitle.textContent = 'Level 2 Complete! 🏆';
-            firstPlayerCost = playerCostRound4;
-            finalPlayerCost = playerCostRound6;
-            finalBotCost = travelingBotCost;
-
-            const beatBotR4 = firstPlayerCost <= finalBotCost;
-            const beatBotR6 = finalPlayerCost <= finalBotCost;
-            const improvedScore = finalPlayerCost < firstPlayerCost;
-            const bestPlayerScore = Math.min(firstPlayerCost, finalPlayerCost);
-
-             if (beatBotR6 || beatBotR4) {
-                 let winContext = "";
-                 if (beatBotR6 && bestPlayerScore === finalPlayerCost) { winContext = "on your 2nd try "; }
-                 else if (beatBotR4 && bestPlayerScore === firstPlayerCost && !beatBotR6) { winContext = "on your 1st try "; }
-                 else if (beatBotR4 && beatBotR6) { winContext = ""; } // Beat both times
-                 resultMessage = `🏆 Incredible! Your best score (${bestPlayerScore}s) ${winContext}beat (or tied) the expert bot's ${finalBotCost}s! You're a pro!`;
-                 if (improvedScore) { resultMessage += ` Plus, you improved your own score!`; }
-             } else if (improvedScore) {
-                 resultMessage = `👍 Well done improving your Expert score from ${firstPlayerCost}s to ${finalPlayerCost}s! That takes skill!`;
-             } else {
-                  resultMessage = `😥 That was tough! The expert bot was faster (${finalBotCost}s vs your best of ${bestPlayerScore}s). Great effort!`;
-             }
-             
-             // Prepare L2 score data
-             scoreDataToSave = {
-                level: 2,
-                scores: {
-                    [round4Info.scoreLabel]: firstPlayerCost,
-                    [round5Info.scoreLabel]: finalBotCost,
-                    [round6Info.scoreLabel]: finalPlayerCost
-                }
-            };
-
-             wrapUpPerformance.innerHTML = `
-                <h4>Level 2 Performance</h4>
-                 <p><strong>${round4Info.description} Cost:</strong> ${firstPlayerCost}s</p>
-                 <p><strong>${round5Info.description} Cost:</strong> ${finalBotCost}s</p>
-                 <p><strong>${round6Info.description} Cost:</strong> ${finalPlayerCost}s</p>
-                 <p style="margin-top: 10px; font-weight: 600;">${resultMessage}</p> 
-            `;
+        let resultMessage = '';
+        if (beatBotBest) {
+            resultMessage = `🎉 Awesome! Your best cost (${bestPlayerCost}) beat (or tied) the bot's ${botPathCost}!`;
+        } else {
+             resultMessage = `😥 The bot was more efficient this time (${botPathCost} vs your best of ${bestPlayerCost}). Try again!`;
         }
 
-        // --- Save game results ---
+        const scoreDataToSave = {
+            level: 1,
+            scores: {
+                [round1Info.scoreLabel]: playerCostRound1,
+                'L1 - Your 1st Try Time': playerTimeRound1.toFixed(1),
+                [round2Info.scoreLabel]: botPathCost,
+                'L1 - Bot\'s Time': botTime.toFixed(1), // Add bot time
+                [round3Info.scoreLabel]: playerCostRound3,
+                'L1 - Your 2nd Try Time': playerTimeRound3.toFixed(1)
+            }
+        };
+
+        wrapUpPerformance.innerHTML = `
+            <h4>Performance Summary</h4>
+            <p><strong>${round1Info.description}:</strong> &nbsp; <strong>Cost:</strong> ${playerCostRound1} | <strong>Time:</strong> ${playerTimeRound1.toFixed(1)}s</p>
+            <p><strong>${round2Info.description}:</strong> &nbsp; <strong>Cost:</strong> ${botPathCost} | <strong>Time:</strong> ${botTime.toFixed(1)}s</p>
+            <p><strong>${round3Info.description}:</strong> &nbsp; <strong>Cost:</strong> ${playerCostRound3} | <strong>Time:</strong> ${playerTimeRound3.toFixed(1)}s</p>
+            <p style="margin-top: 10px; font-weight: 600;">${resultMessage}</p> 
+        `;
+
         if (window.saveGameResultsToFirebase) {
             window.saveGameResultsToFirebase(scoreDataToSave);
         } else {
             console.warn("Firebase game results save function not found.");
         }
-        // --- End Save game results ---
-
 
         // --- Add Buttons ---
         const btnAgain = document.createElement('button');
-        btnAgain.textContent = `Play Level ${isExpert ? '2' : '1'} Again ${isExpert ? '🔄🍦🍦' : '🔄🍦'}`;
+        btnAgain.textContent = `Play Again 🔄🍦`;
         btnAgain.className = 'player-btn';
-        btnAgain.onclick = () => { closeWrapUpPopup(); if(level === 'trainee') setupGame(); else setupExpertChallenge(); };
+        btnAgain.onclick = () => { closeWrapUpPopup(); setupGame(); };
         wrapUpButtons.appendChild(btnAgain);
 
         const btnNav = document.createElement('button');
-        btnNav.textContent = level === 'trainee' ? 'Next Level Unlocked! Go to Menu 🚪' : 'Back to Menu 🚪';
+        btnNav.textContent = 'Back to Menu 🚪';
         btnNav.className = 'bot-btn';
         btnNav.onclick = () => { closeWrapUpPopup(); updateNavigationPage(); showPage('navigation-page'); };
         wrapUpButtons.appendChild(btnNav);
 
-        if (isExpert) { // Only show Finish Game after Level 2
-            const btnFinish = document.createElement('button');
-            btnFinish.textContent = 'Finish Game 🏁';
-            btnFinish.className = 'finish-game-btn';
-            btnFinish.onclick = () => {
-                closeWrapUpPopup();
-                localStorage.removeItem('iceCreamExpressLevel1Complete'); // Reset lock
-                initializeAppFlow(); // Restart from the beginning (blank user info)
-            };
-            wrapUpButtons.appendChild(btnFinish);
-        }
+        const btnFinish = document.createElement('button');
+        btnFinish.textContent = 'Finish Game 🏁';
+        btnFinish.className = 'finish-game-btn';
+        btnFinish.onclick = () => {
+            closeWrapUpPopup();
+            initializeAppFlow();
+        };
+        wrapUpButtons.appendChild(btnFinish);
         // --- End Add Buttons ---
 
         wrapUpPopup.style.display = 'flex'; 
     }
     function closeWrapUpPopup() { wrapUpPopup.style.display = 'none'; }
-    // --- End Wrap Up Logic ---
-
-    function calculateTip(cost, isExpertLevel) {
-        const maxTip = isExpertLevel ? 20.00 : 10.00;
-        const tipDenominator = isExpertLevel ? MAX_COST * 1.5 : MAX_COST; 
-        return Math.max(0, maxTip - (cost / tipDenominator) * maxTip);
+    
+    function calculateTip(cost) {
+        let tip = MAX_TIP - ((cost / MAX_COST_PENALTY) * MAX_TIP);
+        return Math.max(0, tip);
     }
 
-    // --- UPDATED: closePopup with new labels ---
     function closePopup() { 
         popupOverlay.style.display = 'none'; 
-        finishBtn.style.display = 'none'; 
-        startNextRoundBtn.style.display = 'inline-block'; 
-        closePopupBtn.style.display = 'inline-block'; 
-        closeXBtn.style.display = 'block'; 
-        currentDemoStep = 0; 
         
-        let nextRound = 0;
-        if (currentRound === 2) { nextRound = 3; } 
-        else if (currentRound === 5) { nextRound = 6; } 
-        
-        if (nextRound > 0) {
-            currentRound = nextRound; // IMPORTANT: Update currentRound *before* getting label
-            const nextRoundInfo = getRoundLabelInfo(currentRound);
-            startNextRoundBtn.textContent = `Start ${nextRoundInfo.description}!`; 
-        } else {
-            // Should not happen, but hide button just in case
-             startNextRoundBtn.style.display = 'none'; 
+        if (currentRound === 2) {
+            startNextRoundBtn.textContent = "Start 2nd Try! 🚚";
+            startNextRoundBtn.style.display = 'inline-block';
+            rewatchBotBtn.textContent = "Re-Watch Bot's Turn 🤖";
+            rewatchBotBtn.style.display = 'inline-block';
         }
     }
-    closePopupBtn.addEventListener('click', closePopup); 
+    popupGotItBtn.addEventListener('click', closePopup); 
     closeXBtn.addEventListener('click', closePopup);
-
-    // --- GRID & MAP GENERATION (No changes needed) ---
-    function createGrid(numHouses) { boardEl.innerHTML = ''; grid = Array.from({ length: GRID_SIZE }, () => []); for (let r = 0; r < GRID_SIZE; r++) { for (let c = 0; c < GRID_SIZE; c++) { const el = document.createElement('div'); el.className = 'cell'; el.dataset.row = r; el.dataset.col = c; boardEl.appendChild(el); grid[r][c] = { element: el, r, c, cost: FAST_ROAD_COST, isObstacle: false }; } } if (numHouses === 1) generateMapLayout(); else generateTwoHouseLayout(); }
-    function generateMapLayout() { let pathFound; do { grid.flat().forEach(cell => { cell.isObstacle = false; cell.cost = FAST_ROAD_COST; cell.element.className = 'cell road-fast'; cell.element.textContent = ''; }); startNode = { row: 0, col: 0 }; endNode = { row: GRID_SIZE - 1, col: GRID_SIZE - 1 }; endNode2 = null; for (let i = 0; i < OBSTACLE_COUNT; i++) { let r, c; do { r = ~~(Math.random() * GRID_SIZE); c = ~~(Math.random() * GRID_SIZE); } while (grid[r]?.[c]?.isObstacle || (r === startNode.row && c === startNode.col) || (r === endNode.row && c === endNode.col)); if(grid[r]?.[c]){ grid[r][c].isObstacle = true; grid[r][c].element.classList.add('obstacle'); grid[r][c].element.textContent = ['🌳', '🏫', '🏛️', '⛲'][~~(Math.random()*4)]; } } pathFound = pathExistsCheck(grid, startNode, endNode); } while (!pathFound); for (let i = 0; i < SLOW_ROAD_COUNT; i++) { let r, c; do { r = ~~(Math.random() * GRID_SIZE); c = ~~(Math.random() * GRID_SIZE); } while (!grid[r]?.[c] || (r === startNode.row && c === startNode.col) || (r === endNode.row && c === endNode.col) || grid[r][c].isObstacle || grid[r][c].cost !== FAST_ROAD_COST); grid[r][c].cost = SLOW_ROAD_COST; grid[r][c].element.classList.replace('road-fast', 'road-slow'); } if(grid[endNode.row]?.[endNode.col]?.element) { grid[endNode.row][endNode.col].element.textContent = '🏠'; grid[endNode.row][endNode.col].element.classList.add('end-node-style'); } }
-    function generateTwoHouseLayout() { let pathFound1, pathFound2; do { grid.flat().forEach(cell => { cell.isObstacle = false; cell.cost = FAST_ROAD_COST; cell.element.className = 'cell road-fast'; cell.element.textContent = ''; }); startNode = { row: 0, col: 0 }; endNode = { row: GRID_SIZE - 1, col: GRID_SIZE - 1 }; endNode2 = { row: GRID_SIZE - 1, col: 0 }; for (let i = 0; i < OBSTACLE_COUNT; i++) { let r, c; do { r = ~~(Math.random() * GRID_SIZE); c = ~~(Math.random() * GRID_SIZE); } while (grid[r]?.[c]?.isObstacle || isStartOrEnd(r, c, startNode, endNode, endNode2)); if(grid[r]?.[c]){ grid[r][c].isObstacle = true; grid[r][c].element.classList.add('obstacle'); grid[r][c].element.textContent = ['🌳', '🏫', '🏛️', '⛲'][~~(Math.random()*4)]; } } pathFound1 = pathExistsCheck(grid, startNode, endNode); pathFound2 = pathExistsCheck(grid, endNode, endNode2); } while (!pathFound1 || !pathFound2); for (let i = 0; i < SLOW_ROAD_COUNT; i++) { let r, c; do { r = ~~(Math.random() * GRID_SIZE); c = ~~(Math.random() * GRID_SIZE); } while (!grid[r]?.[c] || isStartOrEnd(r, c, startNode, endNode, endNode2) || grid[r][c].isObstacle || grid[r][c].cost !== FAST_ROAD_COST); grid[r][c].cost = SLOW_ROAD_COST; grid[r][c].element.classList.replace('road-fast', 'road-slow'); } if(grid[endNode.row]?.[endNode.col]?.element) { grid[endNode.row][endNode.col].element.textContent = '🏠1'; grid[endNode.row][endNode.col].element.classList.add('end-node-style'); } if(grid[endNode2.row]?.[endNode2.col]?.element) { grid[endNode2.row][endNode2.col].element.textContent = '🏠2'; grid[endNode2.row][endNode2.col].element.classList.add('end-node-style'); } }
-    const isStartOrEnd = (r, c, s, e1, e2) => (r === s.row && c === s.col) || (r === e1.row && c === e1.col) || (e2 && r === e2.row && c === e2.col);
     
-    // --- PLAYER LOGIC (Backtracking Fixed - No changes needed for labels) ---
+
+    replayMiniDemoBtn.addEventListener('click', () => {
+        setupAStarDemo(); // Just reset the mini-demo
+    });
+
+
+    // --- GRID & MAP GENERATION ---
+    function createGrid() {
+        boardEl.innerHTML = ''; 
+        grid = Array.from({ length: GRID_SIZE }, () => []); 
+        for (let r = 0; r < GRID_SIZE; r++) { 
+            for (let c = 0; c < GRID_SIZE; c++) { 
+                const el = document.createElement('div'); 
+                el.className = 'cell'; 
+                el.dataset.row = r; el.dataset.col = c; 
+                boardEl.appendChild(el); 
+                grid[r][c] = { element: el, r, c, cost: FAST_ROAD_COST, isObstacle: false }; 
+            } 
+        } 
+        generateMapLayout();
+    }
+    function generateMapLayout() { 
+        let pathFound; 
+        do { 
+            grid.flat().forEach(cell => { 
+                cell.isObstacle = false; 
+                cell.cost = FAST_ROAD_COST;
+                cell.element.className = 'cell road-fast'; 
+                cell.element.textContent = ''; 
+            }); 
+            startNode = { row: 0, col: 0 }; 
+            endNode = { row: GRID_SIZE - 1, col: GRID_SIZE - 1 }; 
+            for (let i = 0; i < OBSTACLE_COUNT; i++) { 
+                let r, c; 
+                do { 
+                    r = ~~(Math.random() * GRID_SIZE); 
+                    c = ~~(Math.random() * GRID_SIZE); 
+                } while (grid[r]?.[c]?.isObstacle || (r === startNode.row && c === startNode.col) || (r === endNode.row && c === endNode.col)); 
+                if(grid[r]?.[c]){ 
+                    grid[r][c].isObstacle = true; 
+                    grid[r][c].element.classList.add('obstacle'); 
+                    grid[r][c].element.textContent = ['🌳', '🏫', '🏛️', '⛲'][~~(Math.random()*4)]; 
+                } 
+            } 
+            pathFound = pathExistsCheck(grid, startNode, endNode); 
+        } while (!pathFound); 
+        
+        for (let i = 0; i < SLOW_ROAD_COUNT; i++) { 
+            let r, c; 
+            do { 
+                r = ~~(Math.random() * GRID_SIZE); 
+                c = ~~(Math.random() * GRID_SIZE); 
+            } while (!grid[r]?.[c] || (r === startNode.row && c === startNode.col) || (r === endNode.row && c === endNode.col) || grid[r][c].isObstacle || grid[r][c].cost !== FAST_ROAD_COST); 
+            grid[r][c].cost = SLOW_ROAD_COST; 
+            grid[r][c].element.classList.replace('road-fast', 'road-slow'); 
+        } 
+
+        if(grid[endNode.row]?.[endNode.col]?.element) { 
+            grid[endNode.row][endNode.col].element.textContent = '🏠'; 
+            grid[endNode.row][endNode.col].element.classList.add('end-node-style'); 
+        } 
+    }
+    const isStartOrEnd = (r, c, s, e1) => (r === s.row && c === s.col) || (r === e1.row && c === e1.col);
+    
     function handlePlayerMove(e) { 
+        if (playerPath.length === 1 && !roundTimerInterval) {
+             roundStartTime = Date.now();
+             // timeDisplay.innerHTML = '<span>⏱️</span> 0.0s'; // This is now set in startPlayerTurn()
+             roundTimerInterval = setInterval(updateRoundTimer, 100);
+        }
         const cellEl = e.target.closest('.cell'); 
         if (!cellEl || !grid[+cellEl.dataset.row]?.[+cellEl.dataset.col]) return; 
         const row = +cellEl.dataset.row, col = +cellEl.dataset.col; 
@@ -955,30 +1214,13 @@ document.addEventListener('DOMContentLoaded', () => {
         // Undo move
         if (playerPath.length > 1 && row === playerPath[playerPath.length - 2].row && col === playerPath[playerPath.length - 2].col) { 
             const costOfRoadBack = grid[lastNode.row]?.[lastNode.col]?.cost ?? FAST_ROAD_COST; 
-            playerCost += costOfRoadBack; 
+            playerCost += costOfRoadBack;
             const undoneNode = playerPath.pop(); 
-            if(undoneNode && ( (undoneNode.row === endNode.row && undoneNode.col === endNode.col) || (endNode2 && undoneNode.row === endNode2.row && undoneNode.col === endNode2.col) ) ){
+            if(undoneNode && (undoneNode.row === endNode.row && undoneNode.col === endNode.col)){
                  boardEl.addEventListener('click', handlePlayerMove); 
             }
-            if (currentRound >= 4) { // Expert Level
-                 const currentLastNode = playerPath[playerPath.length - 1];
-                 const currentlyOnEndNode1 = (currentLastNode.row === endNode.row && currentLastNode.col === endNode.col);
-                 const currentlyOnEndNode2 = (endNode2 && currentLastNode.row === endNode2.row && currentLastNode.col === endNode2.col);
-
-                 if(housesVisited.h1 && housesVisited.h2 && (currentlyOnEndNode1 || currentlyOnEndNode2)) {
-                       finishBtn.disabled = false; 
-                       messageBox.textContent = "Going back... but still finished?"; 
-                 } else {
-                      finishBtn.disabled = true; 
-                      if (housesVisited.h1 && housesVisited.h2) { messageBox.textContent = "Going back... Need to end on a house!"; } 
-                      else if (housesVisited.h1) { messageBox.textContent = "Going back... Find House 2."; } 
-                      else if (housesVisited.h2) { messageBox.textContent = "Going back... Find House 1."; } 
-                      else { messageBox.textContent = "Going back costs time!"; }
-                 }
-            } else { // Trainee Level
-                 finishBtn.disabled = true; 
-                 messageBox.textContent = "Going back costs time!";
-            }
+            finishBtn.disabled = true; 
+            messageBox.textContent = "Going back costs time and cost!";
             updatePlayerUI(); 
             return; 
         }
@@ -989,44 +1231,14 @@ document.addEventListener('DOMContentLoaded', () => {
             playerPath.push({ row, col, costSoFar: playerCost }); 
             playerVisited.add(`${row}-${col}`); 
 
-            // Check win conditions
-            switch (currentRound) { 
-                case 1: case 3: // Trainee
-                    if (row === endNode.row && col === endNode.col) { 
-                        messageBox.textContent = `Reached the house! Total cost: ${playerCost}s.`; 
-                        finishBtn.disabled = false; 
-                        boardEl.removeEventListener('click', handlePlayerMove); 
-                    } else {
-                         messageBox.textContent = 'Keep going!';
-                         finishBtn.disabled = true; 
-                    }
-                    break; 
-                case 4: case 6: // Expert
-                    if (row === endNode.row && col === endNode.col) housesVisited.h1 = true; 
-                    if (endNode2 && row === endNode2.row && col === endNode2.col) housesVisited.h2 = true; 
-
-                    const onEndNode1 = (row === endNode.row && col === endNode.col);
-                    const onEndNode2 = (endNode2 && row === endNode2.row && col === endNode2.col);
-
-                    if (housesVisited.h1 && housesVisited.h2 && (onEndNode1 || onEndNode2)) {
-                        messageBox.textContent = `Visited both houses! Final cost: ${playerCost}s.`; 
-                        finishBtn.disabled = false; 
-                        boardEl.removeEventListener('click', handlePlayerMove); 
-                    } else if (housesVisited.h1 && housesVisited.h2) {
-                         messageBox.textContent = "Visited both, but need to end on a house!";
-                         finishBtn.disabled = true; 
-                    } else if (housesVisited.h1) {
-                        messageBox.textContent = "Reached House 1! Now find House 2.";
-                        finishBtn.disabled = true;
-                    } else if (housesVisited.h2) {
-                        messageBox.textContent = "Reached House 2! Now find House 1.";
-                        finishBtn.disabled = true;
-                    } else {
-                         messageBox.textContent = 'Find the houses!';
-                         finishBtn.disabled = true;
-                    }
-                    break; 
-            } 
+            if (row === endNode.row && col === endNode.col) { 
+                messageBox.textContent = `Reached the house! Total cost: ${playerCost}.`; 
+                finishBtn.disabled = false; 
+                boardEl.removeEventListener('click', handlePlayerMove); 
+            } else {
+                 messageBox.textContent = 'Keep going!';
+                 finishBtn.disabled = true; 
+            }
             updatePlayerUI(); 
         } else {
              messageBox.textContent = 'You can only move to squares next to the truck!'; 
@@ -1034,70 +1246,512 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- UI & VISUALIZATION ---
-    function updatePlayerUI() { clearPlayerPath(); playerVisited.forEach(coord => { const [r, c] = coord.split('-').map(Number); if(grid[r]?.[c]?.element) grid[r][c].element.classList.add('player-visited'); }); playerPath.forEach(p => { if(grid[p.row]?.[p.col]?.element) { const cell = grid[p.row][p.col]; cell.element.classList.remove('player-visited'); cell.element.classList.add('player-path'); addIceCreamIconToCell(cell, p.costSoFar); } }); if(playerPath.length > 0) { const currentPlayerPos = playerPath[playerPath.length-1]; if(grid[currentPlayerPos.row]?.[currentPlayerPos.col]?.element) { grid[currentPlayerPos.row][currentPlayerPos.col].element.textContent = '🚚'; } } costDisplay.textContent = `Cost: ${playerCost}s`; const currentIsExpert = currentRound >=4; const tip = calculateTip(playerCost, currentIsExpert); const maxTipForRound = currentIsExpert ? 20.00 : 10.00; tipMeterBar.style.width = maxTipForRound > 0 ? `${(tip / maxTipForRound) * 100}%` : '0%'; tipDisplay.textContent = `Tip: $${tip.toFixed(2)}`; iceCreamIcon.textContent = getIceCreamEmoji(playerCost); moneyIcon.textContent = tip > (maxTipForRound * 0.75) ? '🤑' : tip > (maxTipForRound * 0.33) ? '🙂' : '😥'; }
+    function updatePlayerUI() { 
+        clearPlayerPath(); 
+        playerVisited.forEach(coord => { 
+            const [r, c] = coord.split('-').map(Number); 
+            if(grid[r]?.[c]?.element) grid[r][c].element.classList.add('player-visited'); 
+        }); 
+        playerPath.forEach(p => { 
+            if(grid[p.row]?.[p.col]?.element) { 
+                const cell = grid[p.row][p.col]; 
+                cell.element.classList.remove('player-visited'); 
+                cell.element.classList.add('player-path'); 
+                addIceCreamIconToCell(cell, p.costSoFar); 
+            } 
+        }); 
+        if(playerPath.length > 0) { 
+            const currentPlayerPos = playerPath[playerPath.length-1]; 
+            if(grid[currentPlayerPos.row]?.[currentPlayerPos.col]?.element) { 
+                grid[currentPlayerPos.row][currentPlayerPos.col].element.textContent = '🚚'; 
+            } 
+        } 
+        costDisplay.textContent = `Cost: ${playerCost}`; 
+        
+        const tip = calculateTip(playerCost); 
+        tipMeterBar.style.width = `${(tip / MAX_TIP) * 100}%`;
+        tipDisplay.textContent = `Tip: $${tip.toFixed(2)}`; 
+        
+        // MODIFIED: Set innerHTML to an <img> tag using the new function
+        iceCreamIcon.innerHTML = `<img src="${getIceCreamImageSrc(playerCost)}" alt="tip icon" style="width: 1.2em; height: 1.2em; vertical-align: middle;">`;
+        moneyIcon.textContent = tip > (MAX_TIP * 0.75) ? '🤑' : tip > (MAX_TIP * 0.33) ? '🙂' : '😥'; 
+    }
+    
     function hideResultsComparison() { resultsComparisonEl.style.display = 'none'; resultsComparisonEl.innerHTML = ''; }
     
-    // --- UPDATED: showResultsComparison with new labels ---
+    // MODIFIED: Replaced hardcoded labels (TASK 1)
     function showResultsComparison(completedRound) { 
         let html = ''; 
-        if (completedRound === 2) {
-             const round1Info = getRoundLabelInfo(1);
-             const round2Info = getRoundLabelInfo(2);
-             html = `<h4>Level 1: Comparison</h4>
-                     <p>${round1Info.description} Cost: <strong>${playerCostRound1}s</strong></p>
-                     <p>${round2Info.description} Cost: <strong>${botPathCost}s</strong></p>`; 
-        } else if (completedRound === 5) {
-             const round4Info = getRoundLabelInfo(4);
-             const round5Info = getRoundLabelInfo(5);
-             html = `<h4>Level 2: Comparison</h4>
-                     <p>${round4Info.description} Cost: <strong>${playerCostRound4}s</strong></p>
-                     <p>${round5Info.description} Cost: <strong>${travelingBotCost}s</strong></p>`; 
+        const round1Info = getRoundLabelInfo(1);
+        const round2Info = getRoundLabelInfo(2);
+        const round3Info = getRoundLabelInfo(3);
+        
+        switch (completedRound) {
+            case 1:
+                html = `<h4>${round1Info.description} Complete!</h4>
+                        <p>${round1Info.description} Cost: <strong>${playerCostRound1}</strong> <span>(Time: ${playerTimeRound1.toFixed(1)}s)</span></p>`;
+                break;
+            case 2:
+                html = `<h4>${round2Info.description} Complete!</h4>
+                        <p>${round1Info.description} Cost: <strong>${playerCostRound1}</strong> <span>(Time: ${playerTimeRound1.toFixed(1)}s)</span></p>
+                        <p>${round2Info.description} Cost: <strong>${botPathCost}</strong> <span>(Time: ${botTime.toFixed(1)}s)</span></p>`;
+                break;
+            case 3:
+                html = `<h4>${round3Info.description} Complete!</h4>
+                        <p>${round1Info.description} Cost: <strong>${playerCostRound1}</strong> <span>(Time: ${playerTimeRound1.toFixed(1)}s)</span></p>
+                        <p>${round2Info.description} Cost: <strong>${botPathCost}</strong> <span>(Time: ${botTime.toFixed(1)}s)</span></p>
+                        <p>${round3Info.description} Cost: <strong>${playerCostRound3}</strong> <span>(Time: ${playerTimeRound3.toFixed(1)}s)</span></p>`;
+                break;
         }
+        
         if (html) { resultsComparisonEl.innerHTML = html; resultsComparisonEl.style.display = 'block'; } 
     }
     
-    // --- UPDATED: updateAndShowPopup with new labels ---
+    // NEW: Updated popup text and logic
     function updateAndShowPopup(round) { 
         algoExplanationContainer.style.display = 'none'; 
-        tspExplanationContainer.style.display = 'none'; 
         let nextRoundInfo = null;
 
         if (round === 2) { 
             popupTitle.textContent = "Bot's Super Strategy: A* Search!"; 
-            popupBody.innerHTML = `<div class="popup-body-text"><p>How does the bot instantly find the best path? It uses the <strong>A* (A-Star) Search</strong> algorithm...</p><p>Think of the bot as a smart hiker...</p><ul><li><strong style="color:var(--bot-dark);">G-Cost:</strong> Actual cost from start.</li><li><strong style="color:var(--player-dark);">H-Cost:</strong> Smart guess to goal.</li></ul><p>It adds them to get the <strong>F-Cost (g + h)</strong>. The bot explores the lowest F-Cost path!</p><p><strong>Real-World Uses:</strong> Google Maps, robotics, video games.</p></div>`; 
-            nextRoundInfo = getRoundLabelInfo(3); // Prepare for Round 3
-            closePopupBtn.textContent = `Got It! Start ${nextRoundInfo.description}!`; 
+            popupBody.innerHTML = `<div class="popup-body-text">
+                <p><strong>What is A* (A-Star)?</strong><br>
+                A* is a "pathfinding" algorithm, like a very smart GPS. It's famous for finding the <strong>lowest-cost</strong> path between two points super fast.</p>
+                <p><strong>How We Use It Daily:</strong><br>
+                You use A* every day! It's in <strong>Google Maps</strong> finding your route, in 
+                <strong>video games</strong> helping characters move, and even in <strong>robotics</strong> for navigation.</p>
+                <hr>
+                <p><strong>A* Color Key:</strong><br>
+                You saw this on the main board. You can also control it in the mini-demo below:</p>
+                <ul>
+                    <li><span class="color-key" style="background:var(--visited);"></span> <strong>Light Blue:</strong> "To-Check List" (Open Set)</li>
+                    <li><span class="color-key" style="background:var(--current-node); border-color: var(--bot-dark);"></span> <strong>Dark Blue:</strong> "Checking NOW!" (Current)</li>
+                    <li><span class="color-key" style="background:var(--closed-set-node);"></span> <strong>Grey:</strong> "Already Checked" (Closed Set)</li>
+                </ul>
+            </div>`; 
+            
+            nextRoundInfo = getRoundLabelInfo(3);
+            popupGotItBtn.textContent = "Okay, I got it!"; // MODIFIED: Changed button text (TASK 1)
+            replayMiniDemoBtn.style.display = 'none'; // MODIFIED: Hide replay button (TASK 1)
+            
+            // Show and set up the interactive demo
             algoExplanationContainer.style.display = 'block'; 
-            setupAStarDemo(); 
-        } else if (round === 5) { 
-            popupTitle.textContent = "The Traveling Salesperson Problem!"; 
-            popupBody.innerHTML = `<div class="popup-body-text"><p>The bot just solved a small version of the famous <strong>Traveling Salesperson Problem (TSP)</strong>... to find the most efficient <strong>order</strong> to visit multiple locations.</p><p>Your bot checked every possibility (Start->H1->H2 vs Start->H2->H1). This gets very hard with more stops!</p><p><strong>Real-World Uses:</strong> Amazon/FedEx delivery routes, airline schedules, microchip design.</p></div>`; 
-            nextRoundInfo = getRoundLabelInfo(6); // Prepare for Round 6
-            closePopupBtn.textContent = `Got It! Start ${nextRoundInfo.description}!`; 
-            tspExplanationContainer.style.display = 'block'; 
-            setupTSPDemo(); 
+            setupAStarDemo();
         } 
         popupOverlay.style.display = 'flex'; 
     }
     
-    function animateBotPath(path, message, onComplete) { messageBox.textContent = message; let i = 0; const id = setInterval(() => { if (i < path.length) { const cell = path[i]; if(grid[cell.r]?.[cell.c]?.element) grid[cell.r][cell.c].element.classList.add('bot-path'); addIceCreamIconToCell(grid[cell.r]?.[cell.c], cell.g); i++; } else { clearInterval(id); if (onComplete) onComplete(); } }, 80); }
-    function clearVisualization() { grid.flat().forEach(cell => { if(!cell || !cell.element) return; cell.element.classList.remove('player-path', 'player-visited', 'visited', 'bot-path'); let existingIcon = cell.element.querySelector('.path-icon'); if (existingIcon) existingIcon.remove(); if (cell.isObstacle) return; cell.element.textContent = ''; if (startNode && cell.r === startNode.row && cell.c === startNode.col) { /* Don't clear */ } else if (endNode && cell.r === endNode.row && cell.c === endNode.col) { cell.element.textContent = currentRound >= 4 ? '🏠1' : '🏠'; } else if (endNode2 && cell.r === endNode2.row && cell.c === endNode2.col) { cell.element.textContent = '🏠2'; } }); }
-    function clearPlayerPath() { grid.flat().forEach(cell => { if(!cell || !cell.element) return; cell.element.classList.remove('player-path'); /* Keep player-visited */ if (isStartOrEnd(cell.r, cell.c, startNode, endNode, endNode2) || cell.isObstacle) {} else { cell.element.textContent = ''; } let existingIcon = cell.element.querySelector('.path-icon'); if (existingIcon) existingIcon.remove(); }); } 
-    const getIceCreamEmoji = (cost) => { const maxCostForLevel = currentRound >= 4 ? MAX_COST * 1.5 : MAX_COST; return cost > maxCostForLevel * 0.7 ? '💧' : cost > maxCostForLevel * 0.4 ? '🍨' : '🍦'; }
-    function addIceCreamIconToCell(cell, currentTotalCost) { if(!cell || !cell.element) return; let existingIcon = cell.element.querySelector('.path-icon'); if (existingIcon) existingIcon.remove(); if (cell.isObstacle || isStartOrEnd(cell.r, cell.c, startNode, endNode, endNode2)) return; const iconEl = document.createElement('span'); iconEl.className = 'path-icon'; iconEl.textContent = getIceCreamEmoji(currentTotalCost); cell.element.appendChild(iconEl); }
+    // NEW: Live A* Search Animation
+    function animateAStarSearch(steps, onComplete) {
+        let i = 0;
+        const stepDelay = 400; // Slower delay for learning
 
-    // --- A* ALGORITHM & HELPERS (No changes needed) ---
-    function findShortestPathAStar(targetGrid, sNode, eNode, callback, forDemo = false) { const gridData = targetGrid.map(row => row.map(cell => ({...cell, cameFrom: null, g: Infinity, h: Infinity, f: Infinity}))); if(!gridData[sNode.row]?.[sNode.col] || !gridData[eNode.row]?.[eNode.col]) { if(callback) callback([], []); return; } const start = gridData[sNode.row][sNode.col]; const end = gridData[eNode.row][eNode.col]; start.g = 0; start.h = heuristic(start, end); start.f = start.h; const openSet = [start], closedSet = new Set(); let pathFound = false, animationSteps = []; while (openSet.length > 0) { openSet.sort((a, b) => a.f - b.f); let current = openSet.shift(); if (current.r === end.r && current.c === end.c) { pathFound = true; break; } closedSet.add(`${current.r}-${current.c}`); if (forDemo) { let stepState = { current: { r: current.r, c: current.c }, neighbors: [], path: [] }; let tempPath = []; let temp = current; while (temp) { tempPath.unshift({r:temp.r, c:temp.c}); temp = temp.cameFrom; } stepState.path = tempPath; animationSteps.push(stepState); } for (const nData of getNeighbors(current, gridData)) { if(!nData) continue; if (nData.isObstacle || closedSet.has(`${nData.r}-${nData.c}`)) continue; let tempG = current.g + nData.cost; if (forDemo) animationSteps[animationSteps.length -1].neighbors.push({...nData, currentG: tempG}); if (tempG < nData.g) { nData.cameFrom = current; nData.g = tempG; nData.h = nData.h === Infinity ? heuristic(nData, end) : nData.h; nData.f = nData.g + nData.h; if (!openSet.find(node => node.r === nData.r && node.c === nData.c)) openSet.push(nData); } } } if (pathFound) { const path = []; let temp = gridData[eNode.row][eNode.col]; while (temp) { path.unshift(temp); temp = temp.cameFrom; } if (callback) callback(path, animationSteps); } else { if (callback) callback([], animationSteps); } }
-    function pathExistsCheck(currentGrid, sNode, eNode) { if (!sNode || !eNode || !currentGrid[sNode.row]?.[sNode.col] || !currentGrid[eNode.row]?.[eNode.col]) return false; const q = [{row: sNode.row, col: sNode.col}], visited = new Set([`${sNode.row},${sNode.col}`]); while (q.length > 0) { const { row, col } = q.shift(); if (row === eNode.row && col === eNode.col) return true; for (const n of getNeighbors({r:row,c:col}, currentGrid)) { if(n && !visited.has(`${n.r},${n.c}`) && !n.isObstacle) { visited.add(`${n.r},${n.c}`); q.push({ row: n.r, col: n.c }); } } } return false; }
+        function showNextStep() {
+            if (i >= steps.length) {
+                // Do NOT clear viz classes here, wait for next function
+                if (onComplete) onComplete();
+                return;
+            }
+
+            const step = steps[i];
+            
+            // Clear only the *previous* live viz classes
+            clearAStarVizClasses(false); // false = don't clear final bot path
+            
+            const start = grid[startNode.row][startNode.col];
+            const end = grid[endNode.row][endNode.col];
+
+            // 1. Show Closed Set (Grey)
+            step.closedSet.forEach(coord => {
+                const [r, c] = coord.split('-').map(Number);
+                const cell = grid[r]?.[c];
+                if (cell?.element && !isStartOrEnd(r,c,start,end)) {
+                    cell.element.classList.add('visited');
+                }
+            });
+
+            // 2. Show Open Set (Light Blue)
+            step.openSet.forEach(node => {
+                const cell = grid[node.r]?.[node.c];
+                if (cell?.element && !isStartOrEnd(node.r, node.c, start, end)) {
+                    cell.element.classList.add('next-consider');
+                    addCostLabelToCell(cell.element, node.g, node.h, node.f);
+                }
+            });
+            
+            // 3. Show Neighbors being checked (also Light Blue, with labels)
+            step.neighbors.forEach(n => {
+                const cell = grid[n.r]?.[n.c];
+                if (cell && !cell.isObstacle) {
+                    cell.element.classList.add('next-consider'); // Light Blue
+                    addCostLabelToCell(cell.element, n.g, n.h, n.f);
+                }
+            });
+
+            // 4. Show Current Node (Dark Blue)
+            const currentBotCell = grid[step.current.r]?.[step.current.c];
+            if(currentBotCell?.element) {
+                currentBotCell.element.classList.remove('next-consider'); // Override light blue
+                currentBotCell.element.classList.add('current-bot-pos'); // Dark Blue
+                 if (!isStartOrEnd(currentBotCell.r, currentBotCell.c, start, end)) {
+                    currentBotCell.element.textContent = '🤖';
+                }
+            }
+            
+            messageBox.textContent = `A* Step ${i+1}: Checking cell (${step.current.r}, ${step.current.c})...`;
+
+            i++;
+            setTimeout(showNextStep, stepDelay);
+        }
+        
+        showNextStep();
+    }
+    
+    // Helper to add A* cost labels
+    function addCostLabelToCell(cellEl, g, h, f) {
+        if (!cellEl) return;
+        let costLabel = cellEl.querySelector('.cost-label');
+        if (!costLabel) {
+            costLabel = document.createElement('div');
+            costLabel.className = 'cost-label';
+            cellEl.appendChild(costLabel);
+        }
+        costLabel.innerHTML = `<span class="g-cost">g:${g}</span><span class="h-cost">h:${h}</span><span class="f-cost">f:${f}</span>`;
+    }
+
+    // Helper to clear all visualization classes
+    function clearAStarVizClasses(clearBotPath = false) {
+        const classesToRemove = ['current-bot-pos', 'next-consider', 'visited'];
+        if (clearBotPath) {
+            classesToRemove.push('bot-path');
+        }
+        
+        grid.flat().forEach(cell => {
+            if (!cell || !cell.element) return;
+            cell.element.classList.remove(...classesToRemove);
+            let oldLabels = cell.element.querySelectorAll('.cost-label');
+            oldLabels.forEach(label => label.remove());
+            
+            if (!cell.isObstacle && !isStartOrEnd(cell.r, cell.c, startNode, endNode)) {
+                 if (cell.element.textContent === '🤖') {
+                    cell.element.textContent = '';
+                 }
+            }
+        });
+        if (grid[startNode.row]?.[startNode.col]?.element) {
+             grid[startNode.row][startNode.col].element.textContent = '🤖';
+        }
+    }
+
+
+    function animateBotPath(path, message, onComplete) { 
+        messageBox.textContent = message; 
+        let i = 0; 
+        const id = setInterval(() => { 
+            if (i < path.length) { 
+                const cell = path[i]; 
+                if(grid[cell.r]?.[cell.c]?.element) grid[cell.r][cell.c].element.classList.add('bot-path'); 
+                addIceCreamIconToCell(grid[cell.r]?.[cell.c], cell.g); 
+                i++; 
+            } else { 
+                clearInterval(id); 
+                if (onComplete) onComplete(); 
+            } 
+        }, 80); // Fast animation
+    }
+    
+    function clearVisualization() { 
+        grid.flat().forEach(cell => { 
+            if(!cell || !cell.element) return; 
+            // Remove ALL path/viz classes
+            cell.element.classList.remove('player-path', 'player-visited', 'visited', 'bot-path', 'current-bot-pos', 'next-consider'); 
+            let existingIcon = cell.element.querySelector('.path-icon'); 
+            if (existingIcon) existingIcon.remove(); 
+            let costLabel = cell.element.querySelector('.cost-label');
+            if(costLabel) costLabel.remove();
+            
+            if (cell.isObstacle) return; 
+            cell.element.textContent = ''; 
+            if (startNode && cell.r === startNode.row && cell.c === startNode.col) { /* Don't clear */ } 
+            else if (endNode && cell.r === endNode.row && cell.c === endNode.col) { 
+                cell.element.textContent = '🏠';
+            }
+        }); 
+    }
+    function clearPlayerPath() { 
+        grid.flat().forEach(cell => { 
+            if(!cell || !cell.element) return; 
+            cell.element.classList.remove('player-path', 'player-visited');
+            if (isStartOrEnd(cell.r, cell.c, startNode, endNode) || cell.isObstacle) {} 
+            else { cell.element.textContent = ''; } 
+            let existingIcon = cell.element.querySelector('.path-icon'); 
+            if (existingIcon) existingIcon.remove(); 
+        }); 
+    } 
+
+    const getIceCreamImageSrc = (cost) => { 
+        let penalty = (cost / MAX_COST_PENALTY); // This is a value from 0.0 to 1.0+
+        if (penalty > 0.75) return '4.webp'; // e.g., Melted (Cost > 30)
+        if (penalty > 0.5)  return '3.webp'; // e.g., Melting (Cost > 20)
+        if (penalty > 0.25) return '2.webp'; // e.g., Slightly melting (Cost > 10)
+        return '1.webp'; // e.g., Full (Cost 0-10)
+    }
+    function addIceCreamIconToCell(cell, currentTotalCost) { 
+        if(!cell || !cell.element) return; 
+        let existingIcon = cell.element.querySelector('.path-icon'); 
+        if (existingIcon) existingIcon.remove(); 
+        if (cell.isObstacle || isStartOrEnd(cell.r, cell.c, startNode, endNode)) return; 
+        
+        // MODIFIED: Create an <img> element instead of a <span>
+        const iconEl = document.createElement('img'); 
+        iconEl.className = 'path-icon'; 
+        // MODIFIED: Call the new function and set the .src attribute
+        iconEl.src = getIceCreamImageSrc(currentTotalCost); 
+        
+        cell.element.appendChild(iconEl); 
+    }
+
+    // --- A* ALGORITHM & HELPERS ---
+    // forLiveDemo flag is now used to generate steps for the LIVE demo
+    function findShortestPathAStar(targetGrid, sNode, eNode, callback, forLiveDemo = false) { 
+        const gridData = targetGrid.map(row => row.map(cell => ({...cell, cameFrom: null, g: Infinity, h: Infinity, f: Infinity}))); 
+        if(!gridData[sNode.row]?.[sNode.col] || !gridData[eNode.row]?.[eNode.col]) { 
+            if(callback) callback([], []); return; 
+        } 
+        const start = gridData[sNode.row][sNode.col]; 
+        const end = gridData[eNode.row][eNode.col]; 
+        start.g = 0; 
+        start.h = heuristic(start, end); 
+        start.f = start.h; 
+        
+        const openSet = [start];
+        const closedSet = new Set();
+        let pathFound = false;
+        let animationSteps = []; 
+
+        while (openSet.length > 0) { 
+            openSet.sort((a, b) => a.f - b.f); 
+            let current = openSet.shift(); 
+            
+            if (current.r === end.r && current.c === end.c) { 
+                pathFound = true; 
+                 if (forLiveDemo) { // Add final step
+                    animationSteps.push({
+                        current: { r: current.r, c: current.c },
+                        openSet: [], closedSet: new Set(closedSet), neighbors: [], chosen: null
+                    });
+                }
+                break; 
+            } 
+            
+            closedSet.add(`${current.r}-${current.c}`); 
+            
+            let stepState = null;
+            if (forLiveDemo) { 
+                stepState = {
+                    current: { r: current.r, c: current.c },
+                    openSet: [...openSet].map(n => ({r: n.r, c: n.c, g: n.g, h: n.h, f: n.f})),
+                    closedSet: new Set(closedSet),
+                    neighbors: [], // Neighbors will be filled in the next loop
+                    chosen: null
+                };
+                animationSteps.push(stepState);
+            } 
+            
+            let bestNeighbor = null;
+            for (const nData of getNeighbors(current, gridData)) { 
+                if(!nData) continue; 
+                if (nData.isObstacle || closedSet.has(`${nData.r}-${nData.c}`)) continue; 
+                
+                let tempG = current.g + nData.cost; 
+                
+                if (forLiveDemo && stepState) {
+                     let h = nData.h === Infinity ? heuristic(nData, end) : nData.h;
+                     let f = tempG + h;
+                     stepState.neighbors.push({ r: nData.r, c: nData.c, g: tempG, h: h, f: f });
+                }
+                
+                if (tempG < nData.g) { 
+                    nData.cameFrom = current; 
+                    nData.g = tempG; 
+                    nData.h = nData.h === Infinity ? heuristic(nData, end) : nData.h; 
+                    nData.f = nData.g + nData.h; 
+                    
+                    if (!openSet.find(node => node.r === nData.r && node.c === nData.c)) {
+                        openSet.push(nData); 
+                    }
+                    
+                    if (forLiveDemo && (!bestNeighbor || nData.f < bestNeighbor.f)) {
+                        bestNeighbor = nData;
+                    }
+                } 
+            }
+            if (forLiveDemo && bestNeighbor && stepState) {
+                stepState.chosen = { r: bestNeighbor.r, c: bestNeighbor.c, f: bestNeighbor.f };
+            }
+        } 
+        
+        if (pathFound) { 
+            const path = []; 
+            let temp = gridData[eNode.row][eNode.col]; 
+            while (temp) { 
+                path.unshift(temp); 
+                temp = temp.cameFrom; 
+            } 
+            if (callback) callback(path, animationSteps); 
+        } else { 
+            if (callback) callback([], animationSteps); 
+        } 
+    }
+    
+    function pathExistsCheck(currentGrid, sNode, eNode) { 
+        if (!sNode || !eNode || !currentGrid[sNode.row]?.[sNode.col] || !currentGrid[eNode.row]?.[eNode.col]) return false; 
+        const q = [{row: sNode.row, col: sNode.col}], visited = new Set([`${sNode.row},${sNode.col}`]); 
+        while (q.length > 0) { 
+            const { row, col } = q.shift(); 
+            if (row === eNode.row && col === eNode.col) return true; 
+            for (const n of getNeighbors({r:row,c:col}, currentGrid)) { 
+                if(n && !visited.has(`${n.r},${n.c}`) && !n.isObstacle) { 
+                    visited.add(`${n.r},${n.c}`); 
+                    q.push({ row: n.r, col: n.c }); 
+                } 
+            } 
+        } 
+        return false; 
+    }
     const heuristic = (a, b) => Math.abs(a.r - b.r) + Math.abs(a.c - b.c);
-    const getNeighbors = (n, currentGrid) => { const ns = [], { r, c } = n, size = currentGrid.length; if (r > 0) ns.push(currentGrid[r-1]?.[c]); if (r < size-1) ns.push(currentGrid[r+1]?.[c]); if (c > 0) ns.push(currentGrid[r]?.[c-1]); if (c < size-1) ns.push(currentGrid[r]?.[c+1]); return ns.filter(Boolean); };
+    const getNeighbors = (n, currentGrid) => { 
+        const ns = [], { r, c } = n, size = currentGrid.length; 
+        if (r > 0) ns.push(currentGrid[r-1]?.[c]); 
+        if (r < size-1) ns.push(currentGrid[r+1]?.[c]); 
+        if (c > 0) ns.push(currentGrid[r]?.[c-1]); 
+        if (c < size-1) ns.push(currentGrid[r]?.[c+1]); 
+        return ns.filter(Boolean); 
+    };
 
-    // --- A* DEMO LOGIC (No changes needed) ---
-    function setupAStarDemo() { miniGameBoard.innerHTML = ''; const MINI_GRID_SIZE = 5; const demoStartNode = { row: 0, col: 0 }; const demoEndNode = { row: MINI_GRID_SIZE - 1, col: MINI_GRID_SIZE - 1 }; demoGrid = Array.from({ length: MINI_GRID_SIZE }, (_, r) => Array.from({ length: MINI_GRID_SIZE }, (_, c) => { const el = document.createElement('div'); el.className = 'cell road-fast'; el.dataset.row = r; el.dataset.col = c; miniGameBoard.appendChild(el); return { element: el, r, c, cost: FAST_ROAD_COST, isObstacle: false }; })); demoGrid[1][1].isObstacle = true; demoGrid[1][1].element.classList.add('obstacle'); demoGrid[1][1].element.textContent = '🌳'; demoGrid[2][1].isObstacle = true; demoGrid[2][1].element.classList.add('obstacle'); demoGrid[2][1].element.textContent = '🌳'; demoGrid[0][1].cost = SLOW_ROAD_COST; demoGrid[0][1].element.classList.replace('road-fast', 'road-slow'); demoGrid[1][0].cost = SLOW_ROAD_COST; demoGrid[1][0].element.classList.replace('road-fast', 'road-slow'); demoGrid[demoStartNode.row][demoStartNode.col].element.textContent = '🤖'; demoGrid[demoEndNode.row][demoEndNode.col].element.textContent = '🏠'; demoGrid[demoEndNode.row][demoEndNode.col].element.classList.add('end-node-style'); findShortestPathAStar(demoGrid, demoStartNode, demoEndNode, (path, steps) => { demoPath = steps || []; currentDemoStep = 0; updateAStarDemoUI(); }, true); nextStepBtn.onclick = () => { currentDemoStep = Math.min(demoPath.length - 1, currentDemoStep + 1); updateAStarDemoUI(); }; prevStepBtn.onclick = () => { currentDemoStep = Math.max(0, currentDemoStep - 1); updateAStarDemoUI(); }; }
-    function updateAStarDemoUI() { demoGrid.flat().forEach(cell => { if(!cell || !cell.element) return; cell.element.classList.remove('current-bot-pos', 'next-consider', 'chosen-next-step', 'bot-path'); let oldLabels = cell.element.querySelectorAll('.cost-label'); oldLabels.forEach(label => label.remove()); }); if (demoPath.length === 0 || !demoPath[currentDemoStep]) { explanationText.textContent = "Could not find a path for the demo."; nextStepBtn.disabled = true; prevStepBtn.disabled = true; return; } const step = demoPath[currentDemoStep]; const currentBotCell = demoGrid[step.current.r]?.[step.current.c]; if(currentBotCell?.element) currentBotCell.element.classList.add('current-bot-pos'); step.path.forEach(p => { if(demoGrid[p.r]?.[p.c]?.element) demoGrid[p.r][p.c].element.classList.add('bot-path'); }); let lowestF = Infinity, chosenNeighborPos = null; step.neighbors.forEach(n => { const neighborCell = demoGrid[n.r]?.[n.c]; if (neighborCell && !neighborCell.isObstacle) { if(neighborCell.element) neighborCell.element.classList.add('next-consider'); const g = n.currentG; const h = heuristic(neighborCell, demoGrid[demoGrid.length-1][demoGrid.length-1]); const f = g + h; if (f < lowestF) { lowestF = f; chosenNeighborPos = {r: n.r, c: n.c}; } let costLabel = document.createElement('div'); costLabel.className = 'cost-label'; costLabel.innerHTML = `<span class="g-cost">g:${g}</span><span class="h-cost">h:${h}</span><span class="f-cost">f:${f}</span>`; if(neighborCell.element) neighborCell.element.appendChild(costLabel); } }); if (chosenNeighborPos) { const chosenCell = demoGrid[chosenNeighborPos.r]?.[chosenNeighborPos.c]; if(chosenCell?.element){ chosenCell.element.classList.remove('next-consider'); chosenCell.element.classList.add('chosen-next-step'); } } explanationText.innerHTML = `Bot is at (${step.current.r},${step.current.c}). It checks neighbors and picks the one with the lowest <strong>F-Cost</strong>.`; if (step.current.r === 4 && step.current.c === 4) explanationText.innerHTML = "Bot reached the house! 🎉"; nextStepBtn.disabled = currentDemoStep >= demoPath.length - 2; prevStepBtn.disabled = currentDemoStep === 0; if(demoGrid[4]?.[4]?.element) demoGrid[4][4].element.textContent = '🏠'; if(demoGrid[0]?.[0]?.element) demoGrid[0][0].element.textContent = '🤖'; }
+    // --- A* MINI-DEMO LOGIC ---
+    function setupAStarDemo() {
+        miniGameBoard.innerHTML = '';
+        const MINI_GRID_SIZE = 5;
+        const demoStartNode = { row: 0, col: 0 };
+        const demoEndNode = { row: MINI_GRID_SIZE - 1, col: MINI_GRID_SIZE - 1 };
+        
+        demoGrid = Array.from({ length: MINI_GRID_SIZE }, (_, r) => 
+            Array.from({ length: MINI_GRID_SIZE }, (_, c) => {
+                const el = document.createElement('div');
+                el.className = 'cell road-fast';
+                el.dataset.row = r;
+                el.dataset.col = c;
+                miniGameBoard.appendChild(el);
+                return { element: el, r, c, cost: FAST_ROAD_COST, isObstacle: false };
+            })
+        );
 
-    // --- TSP DEMO LOGIC (No changes needed) ---
-    function setupTSPDemo() { const MINI_GRID_SIZE = 5; const s = { row: 0, col: 0 }, h1 = { row: 4, col: 1 }, h2 = { row: 2, col: 4 }; const createBoard = (container) => { container.innerHTML = ''; return Array.from({ length: MINI_GRID_SIZE }, (_, r) => Array.from({ length: MINI_GRID_SIZE }, (_, c) => { const el = document.createElement('div'); el.className = 'cell road-fast'; container.appendChild(el); return { element: el, r, c, cost: FAST_ROAD_COST, isObstacle: false }; })); }; const boardA = createBoard(tspMiniBoardA); const boardB = createBoard(tspMiniBoardB); const sharedGrid = boardA.map(row => row.map(({element, ...rest}) => rest)); for (let r = 0; r < MINI_GRID_SIZE; r++) { for (let c = 2; c < MINI_GRID_SIZE; c++) { if (isStartOrEnd(r,c,s,h1,h2)) continue; sharedGrid[r][c].cost = SLOW_ROAD_COST; } } sharedGrid[3][3].isObstacle = true; [boardA, boardB].forEach(board => { board.forEach((row, r) => row.forEach((cell, c) => { cell.isObstacle = sharedGrid[r][c].isObstacle; cell.cost = sharedGrid[r][c].cost; if(cell.element){ if (cell.isObstacle) cell.element.classList.add('obstacle'); if (cell.cost === SLOW_ROAD_COST) cell.element.classList.replace('road-fast', 'road-slow'); if (!cell.isObstacle && !isStartOrEnd(r,c,s,h1,h2)) { const costLabel = document.createElement('div'); costLabel.className = 'tsp-cost-label'; costLabel.textContent = cell.cost; cell.element.appendChild(costLabel); } } })); if(board[s.row]?.[s.col]?.element) board[s.row][s.col].element.textContent = '🤖'; if(board[h1.row]?.[h1.col]?.element) board[h1.row][h1.col].element.textContent = '🏠1'; if(board[h2.row]?.[h2.col]?.element) board[h2.row][h2.col].element.textContent = '🏠2'; }); let path_s_h1, cost_s_h1, path_s_h2, cost_s_h2, path_h1_h2, cost_h1_h2, path_h2_h1, cost_h2_h1; const drawPathWithArrows = (path, board) => { for (let i = 0; i < path.length; i++) { const p = path[i]; const cellEl = board[p.r]?.[p.c]?.element; if(!cellEl) continue; cellEl.classList.add('bot-path'); if (i > 0) { const prev_p = path[i-1]; const arrow = document.createElement('div'); arrow.className = 'path-arrow'; arrow.textContent = '▶'; if (p.r < prev_p.r) arrow.classList.add('arrow-up'); else if (p.r > prev_p.r) arrow.classList.add('arrow-down'); else if (p.c < prev_p.c) arrow.classList.add('arrow-left'); else arrow.classList.add('arrow-right'); cellEl.appendChild(arrow); } } }; const clearBoardPaths = (board) => { board.flat().forEach(cell => { if(cell?.element){ cell.element.classList.remove('bot-path'); const arrows = cell.element.querySelectorAll('.path-arrow'); arrows.forEach(a => a.remove()); } }); }; findShortestPathAStar(sharedGrid, s, h1, path => { path_s_h1 = path; cost_s_h1 = path.length > 0 ? path[path.length-1].g : Infinity; }); findShortestPathAStar(sharedGrid, s, h2, path => { path_s_h2 = path; cost_s_h2 = path.length > 0 ? path[path.length-1].g : Infinity; }); findShortestPathAStar(sharedGrid, h1, h2, path => { path_h1_h2 = path; cost_h1_h2 = path.length > 0 ? path[path.length-1].g : Infinity; }); findShortestPathAStar(sharedGrid, h2, h1, path => { path_h2_h1 = path; cost_h2_h1 = path.length > 0 ? path[path.length-1].g : Infinity; }); const totalCostA = cost_s_h1 + cost_h1_h2; const totalCostB = cost_s_h2 + cost_h2_h1; calcRouteABtn.disabled = false; calcRouteBBtn.disabled = true; compareTspBtn.disabled = true; tspCostA.textContent = "Cost: ?"; tspCostB.textContent = "Cost: ?"; tspExplanationText.textContent = "It's faster to go to 🏠1 first (fast roads) than 🏠2 (slow neighborhood). Calculate Route A."; tspRouteAContainer.classList.remove('winner'); tspRouteBContainer.classList.remove('winner'); clearBoardPaths(boardA); clearBoardPaths(boardB); calcRouteABtn.onclick = () => { clearBoardPaths(boardA); drawPathWithArrows(path_s_h1, boardA); drawPathWithArrows(path_h1_h2, boardA); tspCostA.textContent = `Cost: ${totalCostA}`; tspExplanationText.textContent = `Route A (🤖 → 🏠1 → 🏠2) costs ${cost_s_h1} + ${cost_h1_h2} = ${totalCostA}. Now calculate Route B.`; calcRouteABtn.disabled = true; calcRouteBBtn.disabled = false; }; calcRouteBBtn.onclick = () => { clearBoardPaths(boardB); drawPathWithArrows(path_s_h2, boardB); drawPathWithArrows(path_h2_h1, boardB); tspCostB.textContent = `Cost: ${totalCostB}`; tspExplanationText.textContent = `Route B (🤖 → 🏠2 → 🏠1) costs ${cost_s_h2} + ${cost_h2_h1} = ${totalCostB}. Which is better?`; calcRouteBBtn.disabled = true; compareTspBtn.disabled = false; }; compareTspBtn.onclick = () => { if (totalCostA <= totalCostB) { tspRouteAContainer.classList.add('winner'); tspRouteBContainer.classList.remove('winner'); tspExplanationText.textContent = `Route A is the winner! Its cost (${totalCostA}) is lower because the first stop was much faster.`; } else { tspRouteBContainer.classList.add('winner'); tspRouteAContainer.classList.remove('winner'); tspExplanationText.textContent = `Route B is the winner! Its cost (${totalCostB}) is lower.`; } compareTspBtn.disabled = true; calcRouteABtn.disabled = false; calcRouteBBtn.disabled = false; } }
+        // Add obstacles and slow roads
+        demoGrid[1][1].isObstacle = true; demoGrid[1][1].element.classList.add('obstacle');
+        demoGrid[1][2].isObstacle = true; demoGrid[1][2].element.classList.add('obstacle');
+        demoGrid[3][2].isObstacle = true; demoGrid[3][2].element.classList.add('obstacle');
+        demoGrid[3][3].isObstacle = true; demoGrid[3][3].element.classList.add('obstacle');
+        
+        demoGrid[0][2].cost = SLOW_ROAD_COST; demoGrid[0][2].element.classList.replace('road-fast', 'road-slow');
+        demoGrid[0][3].cost = SLOW_ROAD_COST; demoGrid[0][3].element.classList.replace('road-fast', 'road-slow');
+        demoGrid[1][3].cost = SLOW_ROAD_COST; demoGrid[1][3].element.classList.replace('road-fast', 'road-slow');
+        demoGrid[2][3].cost = SLOW_ROAD_COST; demoGrid[2][3].element.classList.replace('road-fast', 'road-slow');
+
+        demoGrid[demoStartNode.row][demoStartNode.col].element.textContent = '🤖';
+        demoGrid[demoEndNode.row][demoEndNode.col].element.textContent = '🏠';
+        demoGrid[demoEndNode.row][demoEndNode.col].element.classList.add('end-node-style');
+
+        // Find path and steps
+        findShortestPathAStar(demoGrid, demoStartNode, demoEndNode, (path, steps) => {
+            demoPath = steps || [];
+            currentDemoStep = 0;
+            updateAStarDemoUI();
+        }, true); // true = generate steps
+
+        nextStepBtn.onclick = () => {
+            currentDemoStep = Math.min(demoPath.length - 1, currentDemoStep + 1);
+            updateAStarDemoUI();
+        };
+        prevStepBtn.onclick = () => {
+            currentDemoStep = Math.max(0, currentDemoStep - 1);
+            updateAStarDemoUI();
+        };
+    }
+
+    function updateAStarDemoUI() {
+        // Clear all previous styles and labels
+        demoGrid.flat().forEach(cell => {
+            if(!cell || !cell.element) return;
+            cell.element.classList.remove('current-bot-pos', 'next-consider', 'visited', 'bot-path');
+            let oldLabels = cell.element.querySelectorAll('.cost-label');
+            oldLabels.forEach(label => label.remove());
+        });
+
+        if (demoPath.length === 0 || !demoPath[currentDemoStep]) {
+            explanationText.textContent = "Could not find a path for the demo.";
+            nextStepBtn.disabled = true;
+            prevStepBtn.disabled = true;
+            return;
+        }
+
+        const step = demoPath[currentDemoStep];
+        const endNode = demoGrid[demoGrid.length-1][demoGrid.length-1];
+
+        // 1. Show Closed Set (Grey)
+        step.closedSet.forEach(coord => {
+            const [r, c] = coord.split('-').map(Number);
+            const cell = demoGrid[r]?.[c];
+            if (cell?.element && !isStartOrEnd(r,c,demoGrid[0][0],endNode)) {
+                cell.element.classList.add('visited');
+            }
+        });
+
+        // 2. Show Open Set (Light Blue)
+        step.openSet.forEach(node => {
+            const cell = demoGrid[node.r]?.[node.c];
+            if (cell?.element && !isStartOrEnd(node.r, node.c, demoGrid[0][0], endNode)) {
+                cell.element.classList.add('next-consider');
+                addCostLabelToCell(cell.element, node.g, node.h, node.f);
+            }
+        });
+        
+        // 3. Show Neighbors being checked (also Light Blue, with labels)
+        step.neighbors.forEach(n => {
+            const cell = demoGrid[n.r]?.[n.c];
+            if (cell && !cell.isObstacle) {
+                 cell.element.classList.add('next-consider'); // Light Blue
+                 addCostLabelToCell(cell.element, n.g, n.h, n.f);
+            }
+        });
+
+        // 4. Show Current Node (Dark Blue)
+        const currentBotCell = demoGrid[step.current.r]?.[step.current.c];
+        if(currentBotCell?.element) {
+            currentBotCell.element.classList.remove('next-consider'); // Override light blue
+            currentBotCell.element.classList.add('current-bot-pos'); // Dark Blue
+        }
+
+        // 5. Update explanation text
+        if (step.current.r === endNode.r && step.current.c === endNode.c) {
+            explanationText.innerHTML = "Done! The bot reached the house! 🎉";
+        } else if (step.chosen) {
+             explanationText.innerHTML = `Bot checks neighbors. The lowest F-Score is <strong>${step.chosen.f}</strong> at (${step.chosen.r},${step.chosen.c}). Let's go there next!`;
+        } else if (step.neighbors.length > 0) {
+            explanationText.innerHTML = `Bot is at (${step.current.r},${step.current.c}) and checking its neighbors...`;
+        } else {
+             explanationText.innerHTML = `Bot is at (${step.current.r},${step.current.c})... no new neighbors to add.`;
+        }
+
+        // Reset text on start/end
+        if(demoGrid[endNode.r]?.[endNode.c]?.element) demoGrid[endNode.r][demoGrid.length-1].element.textContent = '🏠';
+        if(demoGrid[0]?.[0]?.element) demoGrid[0][0].element.textContent = '🤖';
+
+        // 6. Update buttons
+        nextStepBtn.disabled = currentDemoStep >= demoPath.length - 1;
+        prevStepBtn.disabled = currentDemoStep === 0;
+    }
+
 
     // --- INITIALIZE APP FLOW ---
     initializeAppFlow();
@@ -1108,7 +1762,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Firebase initialization
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
   import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
-  import { getFirestore, doc, setDoc, serverTimestamp, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"; // Import needed functions
+  import { getFirestore, doc, setDoc, serverTimestamp, collection, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js"; 
   
   const firebaseConfig = { apiKey: "AIzaSyDmMhE1ZeygXoMsSsiwPns8ibnxqxX8aUw", authDomain: "icecreamexpress-6591d.firebaseapp.com", projectId: "icecreamexpress-6591d", storageBucket: "icecreamexpress-6591d.firebasestorage.app", messagingSenderId: "428791114035", appId: "1:428791114035:web:c6b6390ad0043effc6f646", measurementId: "G-L0NGWZ8T9R" };
   const app = initializeApp(firebaseConfig); 
@@ -1116,16 +1770,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const db = getFirestore(app); 
   console.log("Firebase has been initialized!");
 
-  // --- UPDATED: Function to save user PROFILE data ---
+  // --- Function to save user PROFILE data ---
   window.saveUserProfileToFirebase = async (userInfo) => { 
       const userId = localStorage.getItem('iceCreamExpressUserId'); 
       if (!userId) { console.error("No User ID found for profile save."); return; } 
       try { 
           const dataToSave = { 
               ...userInfo, 
-              lastLogin: serverTimestamp() // Use server timestamp
+              lastLogin: serverTimestamp()
           }; 
-          // Save or update user profile in 'users' collection
           await setDoc(doc(db, "users", userId), dataToSave, { merge: true }); 
           console.log("User profile data saved for:", userId); 
       } catch (e) { 
@@ -1133,7 +1786,7 @@ document.addEventListener('DOMContentLoaded', () => {
       } 
   };
 
-  // --- NEW: Function to save GAME RESULTS data ---
+  // --- Function to save GAME RESULTS data ---
   window.saveGameResultsToFirebase = async (scoreData) => {
       const userId = localStorage.getItem('iceCreamExpressUserId'); 
       const storedUser = localStorage.getItem('iceCreamExpressUser');
@@ -1142,7 +1795,6 @@ document.addEventListener('DOMContentLoaded', () => {
           currentUserInfo = JSON.parse(storedUser);
       } else {
           console.warn("No current user info found in localStorage for saving game results.");
-          // Optionally, you could try fetching from Firebase if needed, but for simplicity:
           currentUserInfo = { firstName: "Unknown", lastNameInitial: "?", age: "?", grade: "?" }; 
       }
 
@@ -1151,14 +1803,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
       try {
           const gameResultData = {
-              userId: userId, // Link back to the user document
-              userInfo: currentUserInfo, // Snapshot of user info at time of completion
+              userId: userId,
+              userInfo: currentUserInfo,
               level: scoreData.level,
-              scores: scoreData.scores, // Use the score labels passed in
-              completedAt: serverTimestamp() // Use server timestamp
+              scores: scoreData.scores, // This now includes the time fields
+              completedAt: serverTimestamp()
           };
 
-          // Add a new document to the 'gameResults' collection
           const docRef = await addDoc(collection(db, "gameResults"), gameResultData);
           console.log("Game results saved with ID:", docRef.id, "for user:", userId);
 
