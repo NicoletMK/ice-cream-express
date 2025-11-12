@@ -435,6 +435,7 @@
             display: flex; 
             flex-direction: column;
             justify-content: center;
+            overflow-y: auto;
         }
 
         /* Fun bobbing animation for the robot */
@@ -656,17 +657,17 @@
         <div class="bot-intro-panel-left">
             <div class="bot-intro-icon">🤖</div>
             <h3 class="bot-intro-panel-title">Bot's Turn!</h3>
-            <p>Get ready to watch the <strong>A* Search</strong> algorithm find the perfect path!</p>
+            <p>Get ready to watch the A* Search algorithm find the perfect path!</p>
             <p style="font-size: 0.9em; opacity: 0.8; margin-top: 15px;">(This is how a real GPS thinks!)</p>
         </div>
 
         <div class="bot-intro-panel-right">
-            <h3 style="font-size: 1.8em; margin-top: 0; color: var(--bot-dark);">How the Bot "Thinks"</h3>
+            <h3 style="font-size: 1.8em; margin-top: 16px; color: var(--bot-dark);">How the Bot "Thinks"</h3>
             
-            <div class="popup-body-text" style="font-size: 1.05em; margin: 0 0 15px 0;">
+            <div class="popup-body-text" style="font-size: 1.06em; margin: 0 0 6px 0;">
                 <p>The bot uses <strong>A* (A-Star) Search</strong>. It's smart because it combines three ideas:</p>
 
-                <p style="margin-top: 10px;"><strong>G-Cost (from "Graph"):</strong><br>
+                <p style="margin-top: 6px;"><strong>G-Cost (from "Graph"):</strong><br>
                 This is the actual cost of the path from the start node (🚚) to the current node. We just call it the <strong>past cost</strong>.</p>
                 
                 <p><strong>H-Cost (from "Heuristic"):</strong><br>
@@ -674,17 +675,9 @@
                 
                 <p><strong>F-Cost (from "Final"):</strong><br>
                 This is the total combined score (G + H). The algorithm always picks the path with the lowest F-Cost to explore next!</p>
-                <hr style="margin: 20px 0;">
-                
-                <p style="font-weight: 600;">Watch for these colors:</p>
-                <ul style="list-style: none; padding-left: 0; font-size: 0.95em; margin-top: 10px;">
-                    <li><span class="color-key" style="background:var(--current-node); border-color: var(--bot-dark);"></span> <strong>Dark Blue:</strong> "Checking NOW!"</li>
-                    <li><span class="color-key" style="background:var(--visited);"></span> <strong>Light Blue:</strong> "To-Check List"</li>
-                    <li><span class="color-key" style="background:var(--closed-set-node);"></span> <strong>Grey:</strong> "Already Checked"</li>
-                </ul>
             </div>
 
-            <button id="start-bot-turn-btn" class="bot-btn" style="margin-top: 20px; width: 100%; font-size: 1.2em;">Watch the Bot!</button>
+            <button id="start-bot-turn-btn" class="bot-btn" style="margin-top: 10px; width: 100%; font-size: 1.2em;">Watch the Bot!</button>
         </div>
 
     </div>
