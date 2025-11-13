@@ -729,7 +729,7 @@
          <div id="wrap-up-performance"></div>
         <div id="wrap-up-reflection">
                <h4>Learning Reflection 🤔</h4>
-               <p>Nice driving! 🍦 How did your path compare to the bot's? The bot uses <strong>A* Search</strong> to find the lowest-cost path. It's so smart because it balances the cost of the path so far (G-Cost) with a guess of what's left (H-Cost). Real GPS apps and delivery drivers use this same logic to save time and gas!</p>
+               <p>Nice driving!🚚💨 How did your path compare to the bot's? The bot uses <strong>A* Search</strong> to find the lowest-cost path. It's so smart because it balances the cost of the path so far (G-Cost) with a guess of what's left (H-Cost). Real GPS apps and delivery drivers use this same logic to save time and gas!</p>
            </div>
          <div id="wrap-up-buttons"></div>
      </div>
@@ -869,7 +869,8 @@ document.addEventListener('DOMContentLoaded', () => {
     navStartTraineeBtn.addEventListener('click', () => { showPage('game-container'); setupGame(); });
 
     function openHowToPlayPopup() {
-        carouselItems = level1TutorialItems; // Only one tutorial
+        educationalInteractions.tutorial_view_count++;
+        carouselItems = level1TutorialItems; 
         introPopupOverlay.style.display = 'flex'; 
         carouselRender(0); 
     }
@@ -1037,7 +1038,9 @@ document.addEventListener('DOMContentLoaded', () => {
             rewatched_bot_count: 0,
             rules_clicked_count: 0,
             time_on_bot_popup_ms: 0,
-            mini_demo_steps_viewed: 0
+            mini_demo_steps_viewed: 0,
+            mini_demo_clicks: [],
+            tutorial_view_count: 0
         };
         botPopupStartTime = 0;
     }
@@ -2082,23 +2085,41 @@ function handleMiniDemoClick(e) {
     const step = path[currentDemoStep];
 
     let msg = `You clicked (${r},${c}): `;
+    let clickType = "undiscovered"; // <-- NEW: Variable to store click type**
 
     // Check against step data
     if (r === step.current.r && c === step.current.c) {
         msg = `<strong>This is the Current Node! 🤖</strong><br>The bot is checking this square right now.`;
+        clickType = "current-node"; // <-- NEW**
     } else if (step.closedSet.includes(`${r}-${c}`)) { // This is the fix: .includes()
         msg = `<strong>This is in the Closed Set! 📁</strong><br>The bot has already checked this square and won't check it again.`;
+        clickType = "closed-set"; // <-- NEW**
     } else if (step.openSet.find(n => n.r === r && n.c === c)) {
         const node = step.openSet.find(n => n.r === r && n.c === c);
         msg = `<strong>This is in the Open Set! 💡</strong><br>It's on the 'To-Check' list. Its F-Score is ${node.f} (g:${node.g} + h:${node.h}).`;
+        clickType = "open-set"; // <-- NEW**
     } else if (clickedCell.isObstacle) {
         msg = `<strong>This is an Obstacle! 🌳</strong><br>The bot knows it can't go here.`;
+        clickType = "obstacle"; // <-- NEW**
     } else if (step.neighbors.find(n => n.r === r && n.c === c)) {
         const node = step.neighbors.find(n => n.r === r && n.c === c);
         msg = `<strong>This is a Neighbor! 🤔</strong><br>The bot is looking at this square. It calculated its F-Score as ${node.f} (g:${node.g} + h:${node.h}).`;
+        clickType = "neighbor"; // <-- NEW**
     } else {
         msg = `<strong>This square is undiscovered.</strong><br>The bot hasn't explored this far yet.`;
+        clickType = "undiscovered"; // <-- NEW**
     }
+
+    // <-- NEW: Log the click event -->**
+    if (educationalInteractions.mini_demo_clicks) {
+        educationalInteractions.mini_demo_clicks.push({
+            coord: `${r}-${c}`,
+            type: clickType,
+            step_visible: currentDemoStep,
+            timestamp: Date.now()
+        });
+    }
+    // <-- End of new code -->**
 
     explanationText.innerHTML = msg;
     // Highlight the text to show it updated
